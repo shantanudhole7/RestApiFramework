@@ -16,7 +16,7 @@ public final class Log {
 	 *
 	 * @param message the message to log
 	 */
-	public static void Log_Information(String message) {
+	public static void logInformation(String message) {
 		LOGGER.info(message);
 	}
 
@@ -25,7 +25,7 @@ public final class Log {
 	 *
 	 * @param message the message to log
 	 */
-	public static void Log_Warning(String message) {
+	public static void logWarning(String message) {
 		LOGGER.warn(message);
 	}
 
@@ -34,7 +34,7 @@ public final class Log {
 	 *
 	 * @param message the message to log
 	 */
-	public static void Log_Error(String message) {
+	public static void logError(String message) {
 		LOGGER.error(message);
 	}
 }

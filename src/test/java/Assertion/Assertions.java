@@ -4,8 +4,6 @@ import org.junit.Assert;
 
 import static Logger.Log.*;
 
-import static org.junit.Assert.*;
-
 public class Assertions {
 
 	/**

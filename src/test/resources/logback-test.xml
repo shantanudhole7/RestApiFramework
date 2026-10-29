@@ -1,0 +1,28 @@
+<configuration>
+    <!-- One log file per run, e.g. target/logs/test_run_2026-10-29_19-10-05.log -->
+    <timestamp key="runTime" datePattern="yyyy-MM-dd_HH-mm-ss"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss} | %-5level | %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>target/logs/test_run_${runTime}.log</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Framework logs: INFO and above on the console, everything in the file -->
+    <logger name="automation" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <!-- Libraries (REST Assured, HTTP client): warnings only -->
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

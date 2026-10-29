@@ -1,8 +1,10 @@
 package Assertion;
 
+import org.junit.Assert;
+
 import static Logger.Log.*;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class Assertions {
 
@@ -15,13 +17,13 @@ public class Assertions {
 	 * @param actual      the actual value
 	 * @param <T>         type of the values being compared
 	 */
-	public static <T> void assert_equals(String description, T expected, T actual) {
+	public static <T> void assertEquals(String description, T expected, T actual) {
 		try {
-			assertEquals(description, expected, actual);
+			Assert.assertEquals(description, expected, actual);
 		} catch (AssertionError e) {
-			Log_Error(String.format("FAIL | %s | Expected: %s | Actual: %s", description, expected, actual));
+			logError(String.format("FAIL | %s | Expected: %s | Actual: %s", description, expected, actual));
 			throw e;
 		}
-		Log_Information(String.format("PASS | %s | Expected: %s | Actual: %s", description, expected, actual));
+		logInformation(String.format("PASS | %s | Expected: %s | Actual: %s", description, expected, actual));
 	}
 }

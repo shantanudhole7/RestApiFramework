@@ -160,5 +160,5 @@ Branch names must start with `feature/`.
 
 - **best-practices:** the project's coding standards (layout, naming, POJOs, config, endpoints, requests,
   assertions, logging, Javadoc, Git workflow). Claude Code applies it automatically when writing or changing code.
-- **test-review:** reviews the framework's code against those standards. Run `/test-review` for all tests, or
+- **test-review:** reviews the framework's code against those standards. Run `/test-review` for all code, or
   `/test-review <file>` for one file.

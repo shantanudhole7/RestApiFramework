@@ -23,24 +23,25 @@ built with **Java**, **REST Assured** and **Maven**.
 ```
 RestApiFramework/
 ├── .claude/skills/
-│   ├── best-practices/SKILL.md     # Coding standards (applied by Claude Code automatically)
-│   └── test-review/SKILL.md        # /test-review: reviews the code against the standards
-├── .github/CODEOWNERS              # Every pull request needs the code owner's review
+│   ├── best-practices/SKILL.md               # Coding standards (applied by Claude Code automatically)
+│   └── test-review/SKILL.md                  # /test-review: reviews the code against the standards
+├── .github/CODEOWNERS                        # Every pull request needs the code owner's review
 ├── src/
 │   ├── main/java/
-│   │   └── Pojo/                   # Request models: AddPlace, Location
+│   │   └── Pojo/                             # Request models: AddPlace, Location
 │   └── test/
 │       ├── java/
-│       │   ├── Assertion/          # Assertions: logging assertEquals (PASS/FAIL lines)
-│       │   ├── Logger/             # Log: logInformation, logWarning, logError
+│       │   ├── Assertion/                    # Assertions: logging assertEquals (PASS/FAIL lines)
+│       │   ├── Logger/                       # Log: logInformation, logWarning, logError
 │       │   └── Resources/
-│       │       ├── Global.properties   # Settings: base URI, API key
-│       │       ├── GlobalEnum.java     # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
-│       │       └── Utils.java          # Request spec, properties reader, JSON path helper
+│       │       ├── Global.properties         # Settings: base URI, API key
+│       │       ├── GlobalEnum.java           # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
+│       │       ├── TestDataBuilder.java      # Builds Add Place and Delete Place payloads
+│       │       └── Utils.java                # Request spec, properties reader, JSON path helper
 │       └── resources/
-│           └── logback-test.xml    # Log format and outputs
-├── CLAUDE.md                       # Project context and rules for Claude Code
-├── pom.xml                         # Dependencies and plugins
+│           └── logback-test.xml              # Log format and outputs
+├── CLAUDE.md                                 # Project context and rules for Claude Code
+├── pom.xml                                   # Dependencies and plugins
 └── README.md
 ```
 
@@ -64,10 +65,10 @@ Open the folder in IntelliJ IDEA as a Maven project and let it download the depe
 
 ```properties
 # Base URI of the Place API; endpoint paths come from GlobalEnum
-api.base.uri = https://rahulshettyacademy.com
+api.base.uri=https://rahulshettyacademy.com
 
 # Public demo key for the practice API, sent as the "key" query parameter
-api.key = qaclick123
+api.key=qaclick123
 ```
 
 Write values without quotes. Keys are case-sensitive.
@@ -78,8 +79,8 @@ Write values without quotes. Keys are case-sensitive.
 mvn test-compile
 ```
 
-Without Maven on the PATH, use IntelliJ's **Maven tool window → Lifecycle → test-compile**. It should end with
-**BUILD SUCCESS**.
+Without Maven on the PATH, use IntelliJ's **Maven tool window → Lifecycle → test-compile**. It should end with **BUILD
+SUCCESS**.
 
 ---
 
@@ -112,11 +113,20 @@ given().spec(requestSpecification()).body(payload)
 
 ### Request bodies
 
-Request bodies are POJOs in `Pojo/` with fluent setters, serialized to JSON by Jackson:
+`TestDataBuilder` builds the request bodies:
+
+- `addPlacePayload(name, address, phoneNumber, language, website, types)` returns an `AddPlace` POJO, serialized to
+  JSON by Jackson. The location (`LATITUDE`, `LONGITUDE`) and `ACCURACY` are fixed test values, defined as constants.
+- `deletePlacePayload(placeId)` returns the JSON body `{"place_id": "<placeId>"}`.
 
 ```java
-new AddPlace().setName(name).setAddress(address).setLocation(new Location().setLat(-38.38).setLng(33.42));
+TestDataBuilder testDataBuilder = new TestDataBuilder();
+AddPlace addPlace = testDataBuilder.addPlacePayload(name, address, phoneNumber, language, website, types);
+String deleteBody = testDataBuilder.deletePlacePayload(placeId);
 ```
+
+POJO fields are camelCase; JSON keys that differ are mapped with `@JsonProperty`, such as
+`phoneNumber` → `"phone_number"`.
 
 ### Reading responses
 

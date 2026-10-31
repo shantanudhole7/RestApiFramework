@@ -66,6 +66,7 @@ Open the folder in IntelliJ IDEA as a Maven project and let it download the depe
 ```properties
 # Base URI of the Place API; endpoint paths come from GlobalEnum
 api.base.uri=https://rahulshettyacademy.com
+
 # Public demo key for the practice API, sent as the "key" query parameter
 api.key=qaclick123
 ```
@@ -94,9 +95,7 @@ Endpoint paths live in `GlobalEnum`, relative to the base URI:
 
 ```java
 ADD_PLACE("/maps/api/place/add/json"),
-
 GET_PLACE("/maps/api/place/get/json"),
-
 DELETE_PLACE("/maps/api/place/delete/json");
 ```
 
@@ -109,36 +108,25 @@ Every request starts from one shared specification, built once per run by `Utils
 - every request and response logged to `requestLogs.txt`
 
 ```java
-given().
-
-spec(requestSpecification()).
-
-body(payload)
+given().spec(requestSpecification()).body(payload)
 ```
 
 ### Request bodies
 
-`TestDataBuilder` builds request bodies. Add Place uses the `AddPlace` and `Location` POJOs with fluent setters,
-serialized to JSON by Jackson. JSON keys that aren't camelCase are mapped with `@JsonProperty`, such as
+`TestDataBuilder` builds the request bodies:
+
+- `addPlacePayload(name, address, phoneNumber, language, website, types)` returns an `AddPlace` POJO, serialized to
+  JSON by Jackson. The location (`LATITUDE`, `LONGITUDE`) and `ACCURACY` are fixed test values, defined as constants.
+- `deletePlacePayload(placeId)` returns the JSON body `{"place_id": "<placeId>"}`.
+
+```java
+TestDataBuilder testDataBuilder = new TestDataBuilder();
+AddPlace addPlace = testDataBuilder.addPlacePayload(name, address, phoneNumber, language, website, types);
+String deleteBody = testDataBuilder.deletePlacePayload(placeId);
+```
+
+POJO fields are camelCase; JSON keys that differ are mapped with `@JsonProperty`, such as
 `phoneNumber` → `"phone_number"`.
-
-```java
-AddPlace payload = new TestDataBuilder().addPlacePayload(name, address, phoneNumber, language, website, types);
-```
-
-```java
-new AddPlace().
-
-setName(name).
-
-setAddress(address).
-
-setLocation(new Location().
-
-setLat(-38.38).
-
-setLng(33.42));
-```
 
 ### Reading responses
 

@@ -23,24 +23,25 @@ built with **Java**, **REST Assured** and **Maven**.
 ```
 RestApiFramework/
 ├── .claude/skills/
-│   ├── best-practices/SKILL.md     # Coding standards (applied by Claude Code automatically)
-│   └── test-review/SKILL.md        # /test-review: reviews the code against the standards
-├── .github/CODEOWNERS              # Every pull request needs the code owner's review
+│   ├── best-practices/SKILL.md               # Coding standards (applied by Claude Code automatically)
+│   └── test-review/SKILL.md                  # /test-review: reviews the code against the standards
+├── .github/CODEOWNERS                        # Every pull request needs the code owner's review
 ├── src/
 │   ├── main/java/
-│   │   └── Pojo/                   # Request models: AddPlace, Location
+│   │   └── Pojo/                             # Request models: AddPlace, Location
 │   └── test/
 │       ├── java/
-│       │   ├── Assertion/          # Assertions: logging assertEquals (PASS/FAIL lines)
-│       │   ├── Logger/             # Log: logInformation, logWarning, logError
+│       │   ├── Assertion/                    # Assertions: logging assertEquals (PASS/FAIL lines)
+│       │   ├── Logger/                       # Log: logInformation, logWarning, logError
 │       │   └── Resources/
-│       │       ├── Global.properties   # Settings: base URI, API key
-│       │       ├── GlobalEnum.java     # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
-│       │       └── Utils.java          # Request spec, properties reader, JSON path helper
+│       │       ├── Global.properties         # Settings: base URI, API key
+│       │       ├── GlobalEnum.java           # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
+│       │       ├── TestDataBuilder.java      # Builds Add Place and Delete Place payloads
+│       │       └── Utils.java                # Request spec, properties reader, JSON path helper
 │       └── resources/
-│           └── logback-test.xml    # Log format and outputs
-├── CLAUDE.md                       # Project context and rules for Claude Code
-├── pom.xml                         # Dependencies and plugins
+│           └── logback-test.xml              # Log format and outputs
+├── CLAUDE.md                                 # Project context and rules for Claude Code
+├── pom.xml                                   # Dependencies and plugins
 └── README.md
 ```
 
@@ -64,10 +65,9 @@ Open the folder in IntelliJ IDEA as a Maven project and let it download the depe
 
 ```properties
 # Base URI of the Place API; endpoint paths come from GlobalEnum
-api.base.uri = https://rahulshettyacademy.com
-
+api.base.uri=https://rahulshettyacademy.com
 # Public demo key for the practice API, sent as the "key" query parameter
-api.key = qaclick123
+api.key=qaclick123
 ```
 
 Write values without quotes. Keys are case-sensitive.
@@ -78,8 +78,8 @@ Write values without quotes. Keys are case-sensitive.
 mvn test-compile
 ```
 
-Without Maven on the PATH, use IntelliJ's **Maven tool window → Lifecycle → test-compile**. It should end with
-**BUILD SUCCESS**.
+Without Maven on the PATH, use IntelliJ's **Maven tool window → Lifecycle → test-compile**. It should end with **BUILD
+SUCCESS**.
 
 ---
 
@@ -94,7 +94,9 @@ Endpoint paths live in `GlobalEnum`, relative to the base URI:
 
 ```java
 ADD_PLACE("/maps/api/place/add/json"),
+
 GET_PLACE("/maps/api/place/get/json"),
+
 DELETE_PLACE("/maps/api/place/delete/json");
 ```
 
@@ -107,15 +109,35 @@ Every request starts from one shared specification, built once per run by `Utils
 - every request and response logged to `requestLogs.txt`
 
 ```java
-given().spec(requestSpecification()).body(payload)
+given().
+
+spec(requestSpecification()).
+
+body(payload)
 ```
 
 ### Request bodies
 
-Request bodies are POJOs in `Pojo/` with fluent setters, serialized to JSON by Jackson:
+`TestDataBuilder` builds request bodies. Add Place uses the `AddPlace` and `Location` POJOs with fluent setters,
+serialized to JSON by Jackson. JSON keys that aren't camelCase are mapped with `@JsonProperty`, such as
+`phoneNumber` → `"phone_number"`.
 
 ```java
-new AddPlace().setName(name).setAddress(address).setLocation(new Location().setLat(-38.38).setLng(33.42));
+AddPlace payload = new TestDataBuilder().addPlacePayload(name, address, phoneNumber, language, website, types);
+```
+
+```java
+new AddPlace().
+
+setName(name).
+
+setAddress(address).
+
+setLocation(new Location().
+
+setLat(-38.38).
+
+setLng(33.42));
 ```
 
 ### Reading responses

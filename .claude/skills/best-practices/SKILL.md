@@ -32,17 +32,17 @@ src/
 
 ## 2. Naming
 
-| Item                      | Convention                          | Example                                                        |
-|---------------------------|-------------------------------------|----------------------------------------------------------------|
-| Class, enum               | PascalCase                          | `Assertions`, `GlobalEnum`                                     |
-| Method                    | camelCase                           | `getPropertiesValue`, `requestSpecification`, `logInformation` |
-| Variable, parameter       | camelCase                           | `baseUri`, `globalKey`                                         |
-| Constant (`static final`) | UPPER_SNAKE_CASE                    | `PROPERTIES_FILE`, `REQUEST_LOG_FILE`                          |
-| Enum constant             | UPPER_SNAKE_CASE, no `API` suffix   | `ADD_PLACE`, `GET_PLACE`, `DELETE_PLACE`                       |
-| Properties key            | lowercase, dot-separated            | `api.base.uri`, `api.key`                                      |
-| Package                   | PascalCase (existing project style) | `Pojo`, `Resources`, `Assertion`, `Logger`                     |
-| POJO field                | Exactly the JSON key                | `phone_number`                                                 |
-| Branch                    | `feature/<short-name>`              | `feature/config-utils`                                         |
+| Item                      | Convention                                               | Example                                                        |
+|---------------------------|----------------------------------------------------------|----------------------------------------------------------------|
+| Class, enum               | PascalCase                                               | `Assertions`, `GlobalEnum`                                     |
+| Method                    | camelCase                                                | `getPropertiesValue`, `requestSpecification`, `logInformation` |
+| Variable, parameter       | camelCase                                                | `baseUri`, `globalKey`                                         |
+| Constant (`static final`) | UPPER_SNAKE_CASE                                         | `PROPERTIES_FILE`, `REQUEST_LOG_FILE`                          |
+| Enum constant             | UPPER_SNAKE_CASE, no `API` suffix                        | `ADD_PLACE`, `GET_PLACE`, `DELETE_PLACE`                       |
+| Properties key            | lowercase, dot-separated                                 | `api.base.uri`, `api.key`                                      |
+| Package                   | PascalCase (existing project style)                      | `Pojo`, `Resources`, `Assertion`, `Logger`                     |
+| POJO field                | camelCase; map a different JSON key with `@JsonProperty` | `phoneNumber` → `"phone_number"`                               |
+| Branch                    | `feature/<short-name>`                                   | `feature/config-utils`                                         |
 
 - Never name a method the same as a library method it calls (for example, the custom `assertEquals`
   calls JUnit as `Assert.assertEquals(...)`; otherwise it would call itself).
@@ -59,7 +59,12 @@ src/
   }
   ```
 
-- Field names match the API's JSON keys exactly, because Jackson uses them as-is.
+- Fields, getters and setters are camelCase. When the API's JSON key differs, map it on the field:
+
+  ```java
+  @JsonProperty("phone_number")
+  private String phoneNumber;
+  ```
 - POJOs hold data only: no API calls, assertions or logging.
 
 ## 4. Configuration
@@ -82,7 +87,8 @@ src/
 - Every request starts from the shared spec: `given().spec(requestSpecification())`.
 - The spec is built once per run with the base URI, API key, JSON content type, and request/response
   logging to `requestLogs.txt`. Don't build a second spec or add these settings again per request.
-- Request bodies are POJOs; avoid hand-written JSON strings for anything beyond a single field.
+- Request bodies are built in `TestDataBuilder`: POJOs for anything beyond a single field.
+  Fixed test values (location, accuracy) are named constants there, never inline numbers.
 
 ## 7. Reading responses
 

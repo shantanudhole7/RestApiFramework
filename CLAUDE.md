@@ -33,7 +33,7 @@ pull request.
 
 - `src/main/java/Pojo/` request models (`AddPlace`, `Location`), serialized by Jackson
 - `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints),
-  `Utils` (request spec, properties reader, JSON helper)
+  `TestDataBuilder` (payloads), `Utils` (request spec, properties reader, JSON helper)
 - `src/test/java/Assertion/Assertions` logging assertion: `assertEquals(description, expected, actual)`
 - `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
 - `src/test/resources/logback-test.xml` log format and outputs
@@ -48,6 +48,7 @@ pull request.
 - Verify only with `Assertions.assertEquals`, expected before actual, with a specific `Verify ...` description.
 - Log with `Log`; never `System.out`, never secrets.
 - Javadoc on every class and public method; single-class imports; format with Ctrl+Alt+L.
+- POJO fields camelCase; map snake_case JSON keys with `@JsonProperty("json_key")`.
 
 ## Gotchas
 
@@ -70,3 +71,4 @@ Add one line per decision so future sessions keep it.
 - 2026-10-30: Properties keys are dot-separated lowercase (`api.base.uri`, `api.key`).
 - 2026-10-30: Packages keep the existing PascalCase names (`Pojo`, `Resources`, `Assertion`, `Logger`).
 - 2026-10-30: Created this CLAUDE.md and the `best-practices` and `test-review` skills.
+- 2026-10-31: POJO fields are camelCase, mapped to snake_case JSON keys with `@JsonProperty` (`phoneNumber` → `phone_number`).

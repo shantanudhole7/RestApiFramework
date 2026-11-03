@@ -1,8 +1,10 @@
 package Assertion;
 
+import io.restassured.response.Response;
 import org.junit.Assert;
 
-import static Logger.Log.*;
+import static Logger.Log.logError;
+import static Logger.Log.logInformation;
 
 public class Assertions {
 
@@ -23,5 +25,19 @@ public class Assertions {
 			throw e;
 		}
 		logInformation(String.format("PASS | %s | Expected: %s | Actual: %s", description, expected, actual));
+	}
+
+	/**
+	 * Assert that an API response has HTTP status 200 (OK), and log the result as a PASS or FAIL line.
+	 * On failure the response body is logged too, since it usually explains the error.
+	 *
+	 * @param response the API response to check
+	 */
+	public static void assertHttpOk(Response response) {
+		int statusCode = response.statusCode();
+		if (statusCode != 200) {
+			logError("Unexpected status " + statusCode + " | Body: " + response.asString());
+		}
+		assertEquals("Verify that api returns 200", 200, statusCode);
 	}
 }

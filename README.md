@@ -1,7 +1,8 @@
 # RestApiFramework – REST Assured API Test Automation Framework
 
 API test automation framework for the [Rahul Shetty Academy](https://rahulshettyacademy.com) **Place API**,
-built with **Java**, **REST Assured** and **Maven**.
+built with **Java**, **REST Assured**, **Cucumber** and **Maven**. Scenarios are written in Gherkin, requests are
+built from POJOs and a shared request specification, and every check is logged as PASS or FAIL.
 
 ---
 
@@ -13,7 +14,7 @@ built with **Java**, **REST Assured** and **Maven**.
 | Maven            | Build and dependencies                                   |
 | REST Assured     | HTTP requests, request specification and request logging |
 | Jackson          | Serializes POJOs to JSON request bodies                  |
-| Cucumber + JUnit | BDD test runner (dependencies in `pom.xml`)              |
+| Cucumber + JUnit | BDD scenarios in Gherkin, step definitions, test runner  |
 | SLF4J + Logback  | Framework logging: console and one log file per run      |
 
 ---
@@ -33,11 +34,17 @@ RestApiFramework/
 │       ├── java/
 │       │   ├── Assertion/                    # Assertions: logging assertEquals (PASS/FAIL lines)
 │       │   ├── Logger/                       # Log: logInformation, logWarning, logError
-│       │   └── Resources/
-│       │       ├── Global.properties         # Settings: base URI, API key
-│       │       ├── GlobalEnum.java           # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
-│       │       ├── TestDataBuilder.java      # Builds Add Place and Delete Place payloads
-│       │       └── Utils.java                # Request spec, properties reader, JSON path helper
+│       │   ├── Resources/
+│       │   │   ├── Global.properties         # Settings: base URI, API key
+│       │   │   ├── GlobalEnum.java           # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
+│       │   │   ├── TestDataBuilder.java      # Builds Add Place and Delete Place payloads
+│       │   │   └── Utils.java                # Request/response specs, properties reader, JSON path helper
+│       │   ├── Features/
+│       │   │   └── PlaceApi.feature          # Place API scenarios
+│       │   ├── StepDefinition/
+│       │   │   └── StepDefinition.java       # Step definitions for the feature files
+│       │   └── cucumber/Options/
+│       │       └── TestRunner.java           # JUnit runner: features path, glue, report plugins
 │       └── resources/
 │           └── logback-test.xml              # Log format and outputs
 ├── CLAUDE.md                                 # Project context and rules for Claude Code
@@ -84,6 +91,23 @@ SUCCESS**.
 
 ---
 
+## Running Tests
+
+Run from the project root. The scenarios call the live practice API.
+
+| Goal                  | Command                                                       |
+|-----------------------|---------------------------------------------------------------|
+| All scenarios         | `mvn test`, or run `TestRunner` in IntelliJ                   |
+| By tag                | `mvn test -Dcucumber.filter.tags="@AddPlace"`                 |
+| One scenario          | Green arrow next to the scenario in the `.feature` file       |
+
+Tags: `@PlaceApi` (every Place API scenario), `@AddPlace`, `@Smoke`.
+
+**Note:** `pom.xml` sets `testFailureIgnore = true`, so Maven reports **BUILD SUCCESS even when scenarios fail**.
+Always check the test results in the console (`pretty` output) or the report.
+
+---
+
 ## How the Framework Works
 
 ### Configuration and endpoints
@@ -101,14 +125,23 @@ DELETE_PLACE("/maps/api/place/delete/json");
 
 ### Request specification
 
-Every request starts from one shared specification, built once per run by `Utils.requestSpecification()`:
+Every request starts from one shared specification, built once per run by `Utils.defaultRequestSpecification()`:
 
 - base URI and API key from `Global.properties`
 - JSON content type
 - every request and response logged to `requestLogs.txt`
 
 ```java
-given().spec(requestSpecification()).body(payload)
+given().spec(defaultRequestSpecification()).body(payload)
+```
+
+Every response is checked against the shared `Utils.defaultResponseSpecification()`, which expects JSON content.
+Status codes are verified in the steps, so each scenario can expect its own code and the check is logged:
+
+```java
+response = requestSpecification.when().post(resource)
+        .then().spec(defaultResponseSpecification())
+        .extract().response();
 ```
 
 ### Request bodies
@@ -142,8 +175,36 @@ with both values and re-throws on failure:
 19:40:56 | INFO  | PASS | Verify status in response body | Expected: OK | Actual: OK
 ```
 
+`Assertions.assertHttpOk(response)` checks for HTTP status 200 the same way, and also logs the response body when the
+status is wrong, since it usually explains the error.
+
 Other messages go through `Log.logInformation`, `logWarning` and `logError`. Logs are written to the console and
 to one file per run in `target/logs/test_run_<timestamp>.log`, as configured in `logback-test.xml`.
+
+### Scenarios and step definitions
+
+Scenarios live in `src/test/java/Features/`, one feature file per API area:
+
+```gherkin
+@PlaceApi
+Feature: Place API
+  Add, get and delete places through the Place API.
+
+  @AddPlace @Smoke
+  Scenario: Add a place
+    Given Add Place payload with "Test Place 1" "123 Main Street" "9876543210" "English" "https://example.com" "Engineer"
+    When User calls "ADD_PLACE" with "POST" http request
+    Then the API call succeeds with status code 200
+```
+
+Each step maps to a method in `StepDefinition` by its exact text:
+
+- **Given** builds the request from the shared spec and a `TestDataBuilder` payload.
+- **When** resolves the endpoint name through `GlobalEnum` and sends the request with the given HTTP method.
+- **Then** verifies the response with `Assertions`.
+
+`TestRunner` runs every feature file with JUnit, prints each step (`pretty`), and writes a JSON report to
+`target/jsonReports/`.
 
 ---
 
@@ -155,10 +216,11 @@ to one file per run in `target/logs/test_run_<timestamp>.log`, as configured in 
 git switch main
 git pull
 git switch -c feature/<name>
-# make changes
+git push -u origin feature/<name>
+# make changes, in small working steps
 git add <files>
 git commit -m "Add <what changed>"
-git push -u origin feature/<name>
+git push
 ```
 
 Then open a pull request into `main` with a **What**, **Changes** and **How to test** section.
@@ -170,5 +232,6 @@ Branch names must start with `feature/`.
 
 - **best-practices:** the project's coding standards (layout, naming, POJOs, config, endpoints, requests,
   assertions, logging, Javadoc, Git workflow). Claude Code applies it automatically when writing or changing code.
-- **test-review:** reviews the framework's code against those standards. Run `/test-review` for all code, or
+- **test-review:** reviews feature files, step definitions and framework code against those standards, including
+  that every step matches its definition and uses its parameters. Run `/test-review` for everything, or
   `/test-review <file>` for one file.

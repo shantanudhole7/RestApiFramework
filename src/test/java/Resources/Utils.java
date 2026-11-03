@@ -1,11 +1,13 @@
 package Resources;
 
 import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.filter.log.RequestLoggingFilter;
 import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import io.restassured.specification.ResponseSpecification;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,7 +41,12 @@ public class Utils {
 	/**
 	 * Request specification shared by every API call; built on first use, then reused for the whole run.
 	 */
-	private static RequestSpecification reqSpecification;
+	private static RequestSpecification requestSpecification;
+
+	/**
+	 * Response specification shared by every API call; built on first use, then reused for the whole run.
+	 */
+	private static ResponseSpecification responseSpecification;
 
 	/**
 	 * Read a value from Global.properties.
@@ -74,12 +81,12 @@ public class Utils {
 	 * @return the shared RequestSpecification
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
-	public RequestSpecification requestSpecification() throws IOException {
-		if (reqSpecification == null) {
+	public RequestSpecification defaultRequestSpecification() throws IOException {
+		if (requestSpecification == null) {
 			String baseUri = getPropertiesValue("api.base.uri");
 			// Kept open for the whole run; closed automatically when the JVM exits.
 			PrintStream requestLogs = new PrintStream(Files.newOutputStream(Paths.get(REQUEST_LOG_FILE)));
-			reqSpecification = new RequestSpecBuilder()
+			requestSpecification = new RequestSpecBuilder()
 					.setBaseUri(baseUri)
 					.addQueryParam("key", getPropertiesValue("api.key"))
 					.setContentType(ContentType.JSON)
@@ -89,7 +96,23 @@ public class Utils {
 			logInformation("Request specification created | Base URI: " + baseUri
 					+ " | Requests and responses logged to " + REQUEST_LOG_FILE);
 		}
-		return reqSpecification;
+		return requestSpecification;
+	}
+
+	/**
+	 * Build the base response specification shared by every Place API call:
+	 * expect JSON content type.
+	 * Built once per run and reused.
+	 *
+	 * @return the shared ResponseSpecification
+	 */
+	public ResponseSpecification defaultResponseSpecification() {
+		if (responseSpecification == null) {
+			responseSpecification = new ResponseSpecBuilder()
+					.expectContentType(ContentType.JSON)
+					.build();
+		}
+		return responseSpecification;
 	}
 
 	/**
@@ -101,7 +124,8 @@ public class Utils {
 	 * @return the value as a string, or null if the path is not in the response
 	 */
 	public String getJsonPath(Response response, String key) {
-		String value = response.jsonPath().getString(key);
+		String value = response.jsonPath()
+		                       .getString(key);
 		if (value == null) {
 			logWarning("JSON path '" + key + "' not found in response | Status: " + response.statusCode());
 		}

@@ -11,6 +11,7 @@ import io.restassured.specification.RequestSpecification;
 
 import java.io.IOException;
 
+import static Assertion.Assertions.assertEquals;
 import static Assertion.Assertions.assertHttpOk;
 import static Logger.Log.logInformation;
 import static io.restassured.RestAssured.given;
@@ -22,6 +23,7 @@ public class StepDefinition extends Utils {
 
 	private RequestSpecification requestSpecification;
 	private Response response;
+	private static String placeId;
 
 	@Given("Add Place payload with {string} {string} {string} {string} {string} {string}")
 	public void addPlacePayloadWith(String name, String address, String phoneNumber, String language, String website,
@@ -45,6 +47,13 @@ public class StepDefinition extends Utils {
 			                               .spec(defaultResponseSpecification())
 			                               .extract()
 			                               .response();
+		} else if (method.equalsIgnoreCase("Get")) {
+			response = requestSpecification.when()
+			                               .get(resource)
+			                               .then()
+			                               .spec(defaultResponseSpecification())
+			                               .extract()
+			                               .response();
 		} else {
 			throw new IllegalArgumentException("Unsupported HTTP method: " + method);
 		}
@@ -54,5 +63,20 @@ public class StepDefinition extends Utils {
 	public void theApiCallSucceedsWithStatusCode() {
 		logInformation("Verify the response status code");
 		assertHttpOk(response);
+	}
+
+	@Then("the place created maps to {string} using {string}")
+	public void verifyPlaceCreatedMapsToUsing(String name, String apiEndPoint) throws IOException {
+		placeId = getJsonPath(response, "place_id");
+
+		logInformation("Add place_id to the request specification for the next API call");
+		requestSpecification = given().spec(defaultRequestSpecification())
+		                              .queryParam("place_id", placeId);
+
+		logInformation("Get the created place " + placeId + " with " + apiEndPoint);
+		userCallsWithHttpRequest(apiEndPoint, "GET");
+
+		logInformation("Verify that the place name matches the expected value");
+		assertEquals("Verify that the place name matches", name, getJsonPath(response, "name"));
 	}
 }

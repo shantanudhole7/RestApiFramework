@@ -134,7 +134,10 @@ src/
 
 ## 10. Javadoc and comments
 
-- Every class and every public method has Javadoc (`/** ... */`, generated with `/**` + Enter in IntelliJ).
+- Every class and every public method has Javadoc (`/** ... */`, generated with `/**` + Enter in IntelliJ). 
+- Exception: step definitions, whose annotation text already documents them. Give a step a short Javadoc
+  only when its behaviour isn't obvious from the text: it reuses or is reused by another step, reads state
+  from an earlier step, or makes extra API calls.
 - The first sentence says what it does; add a second line only for non-obvious behaviour
   (caching, fixed values, what `null` means).
 - `@param`, `@return` and `@throws` each have a description, not just the name.
@@ -229,7 +232,7 @@ Feature: Place API
 - [ ] Assertions go through `Assertions` with a specific `Verify ...` description, expected first
 - [ ] Feature steps and step definitions match exactly; no empty step bodies; every parameter used
 - [ ] Logging through `Log`, no `System.out`
-- [ ] Javadoc on every new class and public method
+- [ ] Javadoc on every new class and public method (step definitions only when their behaviour isn't obvious)
 - [ ] Imports optimized, Java code formatted
 - [ ] No real personal data in code or feature files
 - [ ] Only this topic's files staged

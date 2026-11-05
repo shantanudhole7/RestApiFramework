@@ -62,6 +62,7 @@ and pull request.
 - Feature files PascalCase, one per API area; tags PascalCase (`@PlaceApi`, `@AddPlace`, `@Smoke`).
 - Step definition annotations match the feature text exactly; unimplemented steps throw `PendingException`,
   never an empty body.
+- Step definitions need Javadoc only when their behaviour isn't obvious from the step text.
 
 ## Gotchas
 
@@ -96,3 +97,4 @@ Add one line per decision so future sessions keep it.
 - 2026-11-03: Shared request/response specs are `defaultRequestSpecification()` and `defaultResponseSpecification()`
   in `Utils`; the response spec checks JSON content only, and status codes are verified in the steps.
 - 2026-11-03: Within a branch, work is committed in small working steps (feature file → stubs → steps → outline).
+- 2026-11-05: Step definitions are exempt from the Javadoc rule unless their behaviour isn't obvious from the step text.

@@ -191,10 +191,15 @@ Feature: Place API
   Add, get and delete places through the Place API.
 
   @AddPlace @Smoke
-  Scenario: Add a place
-    Given Add Place payload with "Test Place 1" "123 Main Street" "9876543210" "English" "https://example.com" "Engineer"
+  Scenario Outline: Add a place and verify it can be fetched
+    Given Add Place payload with "<Name>" "<Address>" "<Phone Number>" "<Language>" "<Website>" "<Types>"
     When User calls "ADD_PLACE" with "POST" http request
     Then the API call succeeds with status code 200
+    And the place created maps to "<Name>" using "GET_PLACE"
+
+    Examples:
+      | Name         | Address         | Phone Number | Language | Website                    | Types    |
+      | Test Place 1 | 123 Main Street | 9876543210   | English  | https://example.com/place1 | Engineer |
 ```
 
 - One feature file per API area, with a feature-level tag (`@PlaceApi`) and a one-line description.

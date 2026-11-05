@@ -191,10 +191,15 @@ Feature: Place API
   Add, get and delete places through the Place API.
 
   @AddPlace @Smoke
-  Scenario: Add a place
-    Given Add Place payload with "Test Place 1" "123 Main Street" "9876543210" "English" "https://example.com" "Engineer"
+  Scenario Outline: Add a place and verify it can be fetched
+    Given Add Place payload with "<Name>" "<Address>" "<Phone Number>" "<Language>" "<Website>" "<Types>"
     When User calls "ADD_PLACE" with "POST" http request
     Then the API call succeeds with status code 200
+    And the place created maps to "<Name>" using "GET_PLACE"
+
+    Examples:
+      | Name         | Address         | Phone Number | Language | Website                    | Types    |
+      | Test Place 1 | 123 Main Street | 9876543210   | English  | https://example.com/place1 | Engineer |
 ```
 
 Each step maps to a method in `StepDefinition` by its exact text:
@@ -202,6 +207,7 @@ Each step maps to a method in `StepDefinition` by its exact text:
 - **Given** builds the request from the shared spec and a `TestDataBuilder` payload.
 - **When** resolves the endpoint name through `GlobalEnum` and sends the request with the given HTTP method.
 - **Then** verifies the response with `Assertions`.
+- **And** reads `place_id` from the response, calls `GET_PLACE` with it, and checks the name.
 
 `TestRunner` runs every feature file with JUnit, prints each step (`pretty`), and writes a JSON report to
 `target/jsonReports/`.

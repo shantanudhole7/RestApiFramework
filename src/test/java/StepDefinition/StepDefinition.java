@@ -96,4 +96,19 @@ public class StepDefinition extends Utils {
 		logInformation("Verify that the place name matches the expected value");
 		assertEquals("Verify that the place name matches", name, getJsonPath(response, "name"));
 	}
+
+	@Given("a place exists")
+	public void aPlaceExists() {
+		throw new io.cucumber.java.PendingException();
+	}
+
+	@Given("Delete Place payload for the created place")
+	public void deletePlacePayloadForTheCreatedPlace() {
+		throw new io.cucumber.java.PendingException();
+	}
+
+	@Then("{string} in response body is {string}")
+	public void inResponseBodyIs(String key, String expectedValue) {
+		throw new io.cucumber.java.PendingException();
+	}
 }

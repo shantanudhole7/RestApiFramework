@@ -14,7 +14,6 @@ Feature: Place API
       | Test Place 1 | 123 Main Street | 9876543210   | English  | https://example.com/place1 | Engineer |
       | Test Place 2 | 456 Elm Street  | 1234567890   | Hindi    | https://example.com/place2 | Doctor   |
 
-
   @DeletePlace @Smoke
   Scenario: Delete a place
     Given a place exists

@@ -36,13 +36,16 @@ and pull request.
 ## Layout
 
 - `src/main/java/Pojo/` request models (`AddPlace`, `Location`), serialized by Jackson
-- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints),
-  `TestDataBuilder` (payloads), `Utils` (request/response specs, properties reader, JSON helper)
+- `src/test/java/Api/PlaceApi` endpoint calls for hooks and setup (stateless, no assertions)
 - `src/test/java/Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
   `assertHttpOk(response)`
+- `src/test/java/Context/TestContext` per-scenario state, injected by cucumber-picocontainer
 - `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
+- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints),
+  `TestDataBuilder` (payloads), `Utils` (request/response specs, properties reader, JSON helper)
 - `src/test/java/Features/` Cucumber feature files (`PlaceApi.feature`)
 - `src/test/java/StepDefinition/StepDefinition` step definitions for the feature files
+- `src/test/java/StepDefinition/Hooks` tag-scoped setup (`@Before("@DeletePlace")` creates the place to delete)
 - `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty` and JSON report plugins
 - `src/test/resources/logback-test.xml` log format and outputs
 - Generated, never edit or commit: `target/`, `requestLogs.txt`
@@ -70,11 +73,13 @@ and pull request.
   when scenarios fail**. Always check the test results or the Cucumber report, not just the build status.
 - Cucumber links steps by exact text: changing a word in the feature (`succeed` → `succeeds`) without changing the
   annotation turns the step **undefined**.
-- An empty step body **passes**. Keep `throw new PendingException()` in a step until it is implemented.
+- The HTTP-call step accepts any REST Assured `Method` (case-insensitive) and throws `IllegalArgumentException`
+  for anything else.
+- A failing `@Before` hook marks the scenario failed and skips all its steps; check the hook's log lines first.
+- Step and hook classes get `TestContext` through their constructor; creating one with `new` gives a separate,
+  empty context, and later steps see `null`.
 - Feature files name endpoints as strings (`"ADD_PLACE"`) resolved with `GlobalEnum.valueOf(...)`. Renaming an
   enum constant also means updating those strings; IntelliJ's rename won't.
-- The HTTP-call step supports only POST so far and throws for any other method; add GET/DELETE when a scenario
-  needs them.
 - The request specification is built once per run and cached, so every request logs to the same
   `requestLogs.txt`, which is overwritten at the start of each run.
 - `getJsonPath` returns `null` for a missing JSON path (and logs a warning); a `null` in an assertion usually
@@ -98,3 +103,8 @@ Add one line per decision so future sessions keep it.
   in `Utils`; the response spec checks JSON content only, and status codes are verified in the steps.
 - 2026-11-03: Within a branch, work is committed in small working steps (feature file → stubs → steps → outline).
 - 2026-11-05: Step definitions are exempt from the Javadoc rule unless their behaviour isn't obvious from the step text.
+- 2026-11-06: TestDataBuilder follows the Test Data Builder pattern: it owns payload defaults (`defaultAddPlacePayload`)
+  as named fake constants; values move to JSON files only when scenarios need many variants.
+- 2026-11-06: The HTTP-call step sends any method with RestAssured `request(Method, path)` instead of one branch per method.
+- 2026-11-06: Scenario state lives in `Context.TestContext`, injected by cucumber-picocontainer into step and hook classes; a new instance per scenario.
+- 2026-11-06: Setup calls outside the step flow go through `Api.PlaceApi`; the `@DeletePlace` hook creates the place each Delete scenario deletes.

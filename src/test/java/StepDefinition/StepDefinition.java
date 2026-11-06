@@ -1,18 +1,22 @@
 package StepDefinition;
 
+import Context.TestContext;
 import Resources.GlobalEnum;
 import Resources.TestDataBuilder;
 import Resources.Utils;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import io.restassured.http.Method;
 import io.restassured.response.Response;
-import io.restassured.specification.RequestSpecification;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Locale;
 
 import static Assertion.Assertions.assertEquals;
 import static Assertion.Assertions.assertHttpOk;
+import static Logger.Log.logError;
 import static Logger.Log.logInformation;
 import static io.restassured.RestAssured.given;
 
@@ -21,17 +25,25 @@ import static io.restassured.RestAssured.given;
  */
 public class StepDefinition extends Utils {
 
-	private RequestSpecification requestSpecification;
-	private Response response;
-	private String placeId;
+	private final TestContext testContext;
+
+	/**
+	 * Cucumber injects the scenario's shared state (cucumber-picocontainer).
+	 *
+	 * @param testContext state shared by the steps and hooks of the current scenario
+	 */
+	public StepDefinition(TestContext testContext) {
+		this.testContext = testContext;
+	}
 
 	@Given("Add Place payload with {string} {string} {string} {string} {string} {string}")
 	public void addPlacePayloadWith(String name, String address, String phoneNumber, String language, String website,
 	                                String types) throws IOException {
 		TestDataBuilder testDataBuilder = new TestDataBuilder();
 		logInformation("Build Add Place payload for '" + name + "'");
-		requestSpecification = given().spec(defaultRequestSpecification())
-		                              .body(testDataBuilder.addPlacePayload(name, address, phoneNumber, language, website, types));
+		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
+		                                           .body(testDataBuilder.addPlacePayload(name, address, phoneNumber,
+		                                                                                 language, website, types)));
 	}
 
 	/**
@@ -39,7 +51,7 @@ public class StepDefinition extends Utils {
 	 * Also called by other steps, e.g. to fetch a created place with GET.
 	 *
 	 * @param apiEndPoint endpoint name from GlobalEnum, e.g. "ADD_PLACE"
-	 * @param method      HTTP method: "POST" or "GET"
+	 * @param method      HTTP method name, case-insensitive, e.g. "POST", "GET", "DELETE"
 	 * @throws IllegalArgumentException if the HTTP method is not supported
 	 */
 	@When("User calls {string} with {string} http request")
@@ -48,29 +60,29 @@ public class StepDefinition extends Utils {
 		                            .getResource();
 		logInformation("User calls '" + apiEndPoint + "' with '" + method + "' http request");
 
-		if (method.equalsIgnoreCase("Post")) {
-			response = requestSpecification.when()
-			                               .post(resource)
-			                               .then()
-			                               .spec(defaultResponseSpecification())
-			                               .extract()
-			                               .response();
-		} else if (method.equalsIgnoreCase("Get")) {
-			response = requestSpecification.when()
-			                               .get(resource)
-			                               .then()
-			                               .spec(defaultResponseSpecification())
-			                               .extract()
-			                               .response();
-		} else {
-			throw new IllegalArgumentException("Unsupported HTTP method: " + method);
+		Method httpMethod;
+		try {
+			httpMethod = Method.valueOf(method.toUpperCase(Locale.ROOT));
+		} catch (IllegalArgumentException e) {
+			logError("Unsupported HTTP method: " + method + " | Supported: " + Arrays.toString(Method.values()));
+			throw new IllegalArgumentException("Unsupported HTTP method: " + method, e);
 		}
+
+		Response response = testContext.getRequestSpecification()
+		                               .when()
+		                               .request(httpMethod, resource)
+		                               .then()
+		                               .spec(defaultResponseSpecification())
+		                               .extract()
+		                               .response();
+		testContext.setResponse(response);
 	}
 
 	@Then("the API call succeeds with status code {int}")
 	public void theApiCallSucceedsWithStatusCode(Integer statusCode) {
 		logInformation("Verify the response status code is " + statusCode);
-		assertEquals("Verify response status code", statusCode, response.statusCode());
+		assertEquals("Verify response status code", statusCode, testContext.getResponse()
+		                                                                   .statusCode());
 	}
 
 	/**
@@ -83,17 +95,35 @@ public class StepDefinition extends Utils {
 	 */
 	@Then("the place created maps to {string} using {string}")
 	public void thePlaceCreatedMapsToUsing(String name, String apiEndPoint) throws IOException {
-		placeId = getJsonPath(response, "place_id");
+		testContext.setPlaceId(getJsonPath(testContext.getResponse(), "place_id"));
 
 		logInformation("Add place_id to the request specification for the next API call");
-		requestSpecification = given().spec(defaultRequestSpecification())
-		                              .queryParam("place_id", placeId);
+		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
+		                                           .queryParam("place_id", testContext.getPlaceId()));
 
-		logInformation("Get the created place " + placeId + " with " + apiEndPoint);
+		logInformation("Get the created place " + testContext.getPlaceId() + " with " + apiEndPoint);
 		userCallsWithHttpRequest(apiEndPoint, "GET");
-		assertHttpOk(response);
+		assertHttpOk(testContext.getResponse());
 
 		logInformation("Verify that the place name matches the expected value");
-		assertEquals("Verify that the place name matches", name, getJsonPath(response, "name"));
+		assertEquals("Verify that the place name matches", name, getJsonPath(testContext.getResponse(), "name"));
+	}
+
+	/**
+	 * Build the Delete Place body for the place_id set by the @DeletePlace hook (Hooks.createPlaceForDelete).
+	 */
+	@Given("Delete Place payload for the created place")
+	public void deletePlacePayloadForTheCreatedPlace() throws IOException {
+		TestDataBuilder testDataBuilder = new TestDataBuilder();
+		logInformation("Build Delete Place payload for place " + testContext.getPlaceId());
+		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
+		                                           .body(testDataBuilder.deletePlacePayload(testContext.getPlaceId())));
+	}
+
+	@Then("{string} in response body is {string}")
+	public void inResponseBodyIs(String key, String expectedValue) {
+		logInformation("Verify that the response body contains " + key + " = " + expectedValue);
+		assertEquals("Verify that the response body contains " + key, expectedValue,
+		             getJsonPath(testContext.getResponse(), key));
 	}
 }

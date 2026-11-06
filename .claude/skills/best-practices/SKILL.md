@@ -1,6 +1,6 @@
 ---
 name: best-practices
-description: Java + REST Assured + Cucumber API test automation standards for this project — project layout, naming, POJOs, configuration, endpoints, request and response specifications, response reading, assertions, logging, feature files, step definitions, Javadoc, formatting, dependencies and Git workflow. Use this skill whenever writing, generating, reviewing, refactoring, or debugging any POJO, utility, assertion, logger call, config value, endpoint, feature file or step definition in this project, even if the request doesn't mention "best practices".
+description: Java + REST Assured + Cucumber API test automation standards for this project — project layout, naming, POJOs, configuration, endpoints, request and response specifications, response reading, assertions, logging, feature files, step definitions, hooks, scenario state (TestContext), API classes, Javadoc, formatting, dependencies and Git workflow. Use this skill whenever writing, generating, reviewing, refactoring, or debugging any POJO, utility, assertion, logger call, config value, endpoint, feature file, step definition, hook, TestContext or API class in this project, even if the request doesn't mention "best practices".
 user-invocable: false
 ---
 
@@ -16,7 +16,9 @@ src/
 ├── main/java/
 │   └── Pojo/                     # Request/response models (serialized by Jackson)
 ├── test/java/
+│   ├── Api/PlaceApi              # Endpoint calls for hooks and setup; returns the response
 │   ├── Assertion/Assertions      # Logging assertions (PASS/FAIL lines)
+│   ├── Context/TestContext       # Per-scenario state shared by steps and hooks
 │   ├── Logger/Log                # The single shared logger
 │   ├── Resources/
 │   │   ├── Global.properties     # Settings: base URI, API key
@@ -24,7 +26,7 @@ src/
 │   │   ├── TestDataBuilder       # Builds request payloads
 │   │   └── Utils                 # Request/response specs, properties reader, JSON helper
 │   ├── Features/                 # Cucumber feature files, one per API area (PlaceApi.feature)
-│   ├── StepDefinition/           # Step definitions for the feature files
+│   ├── StepDefinition/           # Step definitions (StepDefinition) and hooks (Hooks)
 │   └── cucumber/Options/
 │       └── TestRunner            # JUnit runner: features path, glue, report plugins
 └── test/resources/
@@ -47,7 +49,7 @@ src/
 | Constant (`static final`) | UPPER_SNAKE_CASE                                         | `PROPERTIES_FILE`, `REQUEST_LOG_FILE`                                 |
 | Enum constant             | UPPER_SNAKE_CASE, no `API` suffix                        | `ADD_PLACE`, `GET_PLACE`, `DELETE_PLACE`                              |
 | Properties key            | lowercase, dot-separated                                 | `api.base.uri`, `api.key`                                             |
-| Package                   | PascalCase (existing project style)                      | `Pojo`, `Resources`, `Assertion`, `Logger`                            |
+| Package                   | PascalCase (existing project style)                      | `Pojo`, `Resources`, `Assertion`, `Logger`, `Api`, `Context`          |
 | POJO field                | camelCase; map a different JSON key with `@JsonProperty` | `phoneNumber` → `"phone_number"`                                      |
 | Feature file              | PascalCase, one per API area                             | `PlaceApi.feature`                                                    |
 | Cucumber tag              | PascalCase with `@`                                      | `@PlaceApi`, `@AddPlace`, `@Smoke`                                    |
@@ -103,6 +105,8 @@ src/
   status codes are verified in the steps, so each scenario can expect its own code and the check is logged.
 - Request bodies are built in `TestDataBuilder`: POJOs for anything beyond a single field.
   Fixed test values (location, accuracy) are named constants there, never inline numbers.
+- Setup that only needs a valid entity uses a default builder method (`defaultAddPlacePayload()`) with named
+  fake constants: the Test Data Builder pattern.
 
 ## 7. Reading responses
 
@@ -134,7 +138,7 @@ src/
 
 ## 10. Javadoc and comments
 
-- Every class and every public method has Javadoc (`/** ... */`, generated with `/**` + Enter in IntelliJ). 
+- Every class and every public method has Javadoc (`/** ... */`, generated with `/**` + Enter in IntelliJ).
 - Exception: step definitions, whose annotation text already documents them. Give a step a short Javadoc
   only when its behaviour isn't obvious from the text: it reuses or is reused by another step, reads state
   from an earlier step, or makes extra API calls.
@@ -215,14 +219,28 @@ Feature: Place API
 
 - Step text in the annotation must match the feature text exactly; Cucumber links them by text, so change
   both together.
-- New steps start as generated stubs that `throw new PendingException()`. Never leave a step body empty:
-  an empty step passes and hides that nothing was tested.
+- New steps start as stubs that `throw new io.cucumber.java.PendingException();`, fully qualified so no import
+  is added and removed again. Never leave a step body empty: an empty step passes and hides that nothing was tested.
 - Use every step parameter. A parameter that the body ignores (or a value hard-coded instead of it)
   makes the feature lie about what is tested.
-- Keep state between steps in private fields (`requestSpecification`, `response`).
-- The HTTP-call step supports only the methods it implements and throws `IllegalArgumentException` for any
-  other, so a typo fails clearly instead of leaving `response` as `null`.
+- Keep state between steps in `TestContext` (§17), never in fields of the step class.
+- The HTTP-call step sends any REST Assured `Method` (case-insensitive) with `request(Method, path)`. An unknown
+  method logs an error and throws `IllegalArgumentException`, so a typo fails clearly.
 - Each step logs its action with `logInformation`, and verification steps log before they check.
+
+## 17. Scenario state, hooks and the API layer
+
+- Scenario state (request, response, ids) lives in `Context.TestContext`. cucumber-picocontainer creates one
+  instance per scenario and injects it into every step and hook class that takes it in its constructor.
+- Never share state through `static` fields, and never create glue classes with `new`: `new StepDefinition()`
+  gets its own empty state, not the scenario's.
+- Hooks live in `StepDefinition/Hooks` and are scoped by tag (`@Before("@DeletePlace")`). Use them for setup and
+  cleanup the reader doesn't need to see; business setup the scenario is about stays a visible step.
+- Hooks depend on `TestContext`, `Api` classes and `TestDataBuilder`, never on step classes. When a hook creates
+  data a step uses, add a `#` comment in the scenario that names the hook.
+- A setup hook verifies its own call (`assertHttpOk`), so a failed setup fails in the hook and skips the steps.
+- `Api` classes (`PlaceApi`) send one request each from the shared specs and return the `Response`: no state,
+  no assertions. Endpoints come from `GlobalEnum` constants (`GlobalEnum.ADD_PLACE`), not strings.
 
 ## Checklist before opening a pull request
 
@@ -236,3 +254,4 @@ Feature: Place API
 - [ ] Imports optimized, Java code formatted
 - [ ] No real personal data in code or feature files
 - [ ] Only this topic's files staged
+- [ ] Shared state through `TestContext` only: no `static` state, no `new StepDefinition()`

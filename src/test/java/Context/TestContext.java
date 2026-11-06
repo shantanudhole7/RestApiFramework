@@ -1,0 +1,58 @@
+package Context;
+
+import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
+
+/**
+ * State shared by the steps and hooks of one scenario.
+ * Cucumber (cucumber-picocontainer) creates a new instance for every scenario and injects the same instance
+ * into every glue class that takes it in its constructor, so scenarios never share state.
+ */
+public class TestContext {
+
+	private RequestSpecification requestSpecification;
+	private Response response;
+	private String placeId;
+
+	/**
+	 * @return the request being prepared for the next API call
+	 */
+	public RequestSpecification getRequestSpecification() {
+		return requestSpecification;
+	}
+
+	/**
+	 * @param requestSpecification the request to send with the next API call
+	 */
+	public void setRequestSpecification(RequestSpecification requestSpecification) {
+		this.requestSpecification = requestSpecification;
+	}
+
+	/**
+	 * @return the response of the last API call
+	 */
+	public Response getResponse() {
+		return response;
+	}
+
+	/**
+	 * @param response the response of the last API call
+	 */
+	public void setResponse(Response response) {
+		this.response = response;
+	}
+
+	/**
+	 * @return place_id of the place created in this scenario, or null if none was created
+	 */
+	public String getPlaceId() {
+		return placeId;
+	}
+
+	/**
+	 * @param placeId place_id returned by the Add Place API
+	 */
+	public void setPlaceId(String placeId) {
+		this.placeId = placeId;
+	}
+}

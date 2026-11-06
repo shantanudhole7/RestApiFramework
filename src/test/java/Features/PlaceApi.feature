@@ -13,3 +13,11 @@ Feature: Place API
       | Name         | Address         | Phone Number | Language | Website                    | Types    |
       | Test Place 1 | 123 Main Street | 9876543210   | English  | https://example.com/place1 | Engineer |
       | Test Place 2 | 456 Elm Street  | 1234567890   | Hindi    | https://example.com/place2 | Doctor   |
+
+  @DeletePlace @Smoke
+  Scenario: Delete a place and verify the delete succeeds
+    # The @DeletePlace hook creates the place to delete (Hooks.createPlaceForDelete)
+    Given Delete Place payload for the created place
+    When User calls "DELETE_PLACE" with "POST" http request
+    Then the API call succeeds with status code 200
+    And "status" in response body is "OK"

@@ -8,14 +8,15 @@ built from POJOs and a shared request specification, and every check is logged a
 
 ## Tech Stack
 
-| Tool             | Purpose                                                  |
-|------------------|----------------------------------------------------------|
-| Java 11+         | Language                                                 |
-| Maven            | Build and dependencies                                   |
-| REST Assured     | HTTP requests, request specification and request logging |
-| Jackson          | Serializes POJOs to JSON request bodies                  |
-| Cucumber + JUnit | BDD scenarios in Gherkin, step definitions, test runner  |
-| SLF4J + Logback  | Framework logging: console and one log file per run      |
+| Tool             | Purpose                                                          |
+|------------------|------------------------------------------------------------------|
+| Java 11+         | Language                                                         |
+| Maven            | Build and dependencies                                           |
+| REST Assured     | HTTP requests, request specification and request logging         |
+| Jackson          | Serializes POJOs to JSON request bodies                          |
+| Cucumber + JUnit | BDD scenarios in Gherkin, step definitions, test runner          |
+| PicoContainer    | Injects one shared TestContext per scenario into steps and hooks |
+| SLF4J + Logback  | Framework logging: console and one log file per run              |
 
 ---
 
@@ -32,16 +33,21 @@ RestApiFramework/
 │   │   └── Pojo/                             # Request models: AddPlace, Location
 │   └── test/
 │       ├── java/
+│       │   ├── Api/
+│       │   │   └── PlaceApi.java             # Endpoint calls for hooks and setup; returns the response
 │       │   ├── Assertion/                    # Assertions: logging assertEquals (PASS/FAIL lines)
+│       │   ├── Context/
+│       │   │   └── TestContext.java          # Per-scenario state: request, response, place_id
 │       │   ├── Logger/                       # Log: logInformation, logWarning, logError
 │       │   ├── Resources/
 │       │   │   ├── Global.properties         # Settings: base URI, API key
 │       │   │   ├── GlobalEnum.java           # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
-│       │   │   ├── TestDataBuilder.java      # Builds Add Place and Delete Place payloads
+│       │   │   ├── TestDataBuilder.java      # Builds Add Place (custom or default) and Delete Place payloads
 │       │   │   └── Utils.java                # Request/response specs, properties reader, JSON path helper
 │       │   ├── Features/
 │       │   │   └── PlaceApi.feature          # Place API scenarios
 │       │   ├── StepDefinition/
+│       │   │   ├── Hooks.java                # Tag-scoped setup: creates the place for @DeletePlace
 │       │   │   └── StepDefinition.java       # Step definitions for the feature files
 │       │   └── cucumber/Options/
 │       │       └── TestRunner.java           # JUnit runner: features path, glue, report plugins
@@ -101,7 +107,7 @@ Run from the project root. The scenarios call the live practice API.
 | By tag                | `mvn test -Dcucumber.filter.tags="@AddPlace"`                 |
 | One scenario          | Green arrow next to the scenario in the `.feature` file       |
 
-Tags: `@PlaceApi` (every Place API scenario), `@AddPlace`, `@Smoke`.
+Tags: `@PlaceApi` (every Place API scenario), `@AddPlace`, `@DeletePlace`, `@Smoke`.
 
 **Note:** `pom.xml` sets `testFailureIgnore = true`, so Maven reports **BUILD SUCCESS even when scenarios fail**.
 Always check the test results in the console (`pretty` output) or the report.
@@ -139,10 +145,18 @@ Every response is checked against the shared `Utils.defaultResponseSpecification
 Status codes are verified in the steps, so each scenario can expect its own code and the check is logged:
 
 ```java
-response = requestSpecification.when().post(resource)
-        .then().spec(defaultResponseSpecification())
-        .extract().response();
+Response response = testContext.getRequestSpecification()
+                               .when()
+                               .request(httpMethod, resource)
+                               .then()
+                               .spec(defaultResponseSpecification())
+                               .extract()
+                               .response();
 ```
+
+The HTTP method comes from the feature text (`"POST"`, `"GET"`, case-insensitive) and is sent with REST Assured's
+`request(Method, path)`, so every method works without a branch per method. An unknown method fails with
+`Unsupported HTTP method`.
 
 ### Request bodies
 
@@ -151,11 +165,14 @@ response = requestSpecification.when().post(resource)
 - `addPlacePayload(name, address, phoneNumber, language, website, types)` returns an `AddPlace` POJO, serialized to
   JSON by Jackson. The location (`LATITUDE`, `LONGITUDE`) and `ACCURACY` are fixed test values, defined as constants.
 - `deletePlacePayload(placeId)` returns the JSON body `{"place_id": "<placeId>"}`.
+- `defaultAddPlacePayload()` returns an `AddPlace` with fixed fake values, for setup that only needs a place to
+  exist. This is the Test Data Builder pattern: defaults in one place, tests override only what they care about.
 
 ```java
 TestDataBuilder testDataBuilder = new TestDataBuilder();
 AddPlace addPlace = testDataBuilder.addPlacePayload(name, address, phoneNumber, language, website, types);
 String deleteBody = testDataBuilder.deletePlacePayload(placeId);
+AddPlace setupPlace = testDataBuilder.defaultAddPlacePayload();
 ```
 
 POJO fields are camelCase; JSON keys that differ are mapped with `@JsonProperty`, such as
@@ -181,6 +198,34 @@ status is wrong, since it usually explains the error.
 Other messages go through `Log.logInformation`, `logWarning` and `logError`. Logs are written to the console and
 to one file per run in `target/logs/test_run_<timestamp>.log`, as configured in `logback-test.xml`.
 
+### Scenario state, hooks and the API layer
+
+Cucumber creates new step and hook objects for every scenario, so scenarios never share state. Within one
+scenario, steps and hooks share a `TestContext` (request, response, `place_id`). `cucumber-picocontainer` creates
+one per scenario and passes the same instance to every class that takes it in its constructor:
+
+```java
+public StepDefinition(TestContext testContext) {
+    this.testContext = testContext;
+}
+```
+
+Hooks in `StepDefinition/Hooks.java` run setup selected by tag. Before every `@DeletePlace` scenario, a hook
+creates a place and stores its `place_id`, so each Delete scenario deletes a place of its own and can run alone,
+in any order:
+
+```java
+@Before("@DeletePlace")
+public void createPlaceForDelete() throws IOException {
+    Response response = placeApi.addPlace(testDataBuilder.defaultAddPlacePayload());
+    assertHttpOk(response);
+    testContext.setPlaceId(placeApi.getJsonPath(response, "place_id"));
+}
+```
+
+Hooks call the API through `Api/PlaceApi`, not through step methods. `PlaceApi` sends one request from the shared
+specs and returns the `Response`; it keeps no state and makes no assertions, so the caller decides what to check.
+
 ### Scenarios and step definitions
 
 Scenarios live in `src/test/java/Features/`, one feature file per API area:
@@ -200,6 +245,14 @@ Feature: Place API
     Examples:
       | Name         | Address         | Phone Number | Language | Website                    | Types    |
       | Test Place 1 | 123 Main Street | 9876543210   | English  | https://example.com/place1 | Engineer |
+
+  @DeletePlace @Smoke
+  Scenario: Delete a place and verify the delete succeeds
+    # The @DeletePlace hook creates the place to delete (Hooks.createPlaceForDelete)
+    Given Delete Place payload for the created place
+    When User calls "DELETE_PLACE" with "POST" http request
+    Then the API call succeeds with status code 200
+    And "status" in response body is "OK"
 ```
 
 Each step maps to a method in `StepDefinition` by its exact text:
@@ -207,7 +260,9 @@ Each step maps to a method in `StepDefinition` by its exact text:
 - **Given** builds the request from the shared spec and a `TestDataBuilder` payload.
 - **When** resolves the endpoint name through `GlobalEnum` and sends the request with the given HTTP method.
 - **Then** verifies the response with `Assertions`.
-- **And** reads `place_id` from the response, calls `GET_PLACE` with it, and checks the name.
+- **`the place created maps to "<Name>" using "GET_PLACE"`** reads `place_id` from the response, calls `GET_PLACE`
+  with it, and checks the name.
+- **`"<key>" in response body is "<value>"`** reads any JSON key from the last response and checks its value.
 
 `TestRunner` runs every feature file with JUnit, prints each step (`pretty`), and writes a JSON report to
 `target/jsonReports/`.
@@ -237,7 +292,8 @@ Branch names must start with `feature/`.
 ## Claude Code Skills
 
 - **best-practices:** the project's coding standards (layout, naming, POJOs, config, endpoints, requests,
-  assertions, logging, Javadoc, Git workflow). Claude Code applies it automatically when writing or changing code.
+  assertions, logging, Javadoc, scenario state, hooks and the API layer, Git workflow). Claude Code applies it
+  automatically when writing or changing code.
 - **test-review:** reviews feature files, step definitions and framework code against those standards, including
   that every step matches its definition and uses its parameters. Run `/test-review` for everything, or
   `/test-review <file>` for one file.

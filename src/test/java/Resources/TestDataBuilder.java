@@ -20,6 +20,24 @@ public class TestDataBuilder {
 	/** Fixed location accuracy, in metres, sent with every new place. */
 	private static final int ACCURACY = 50;
 
+	/** Name of the default place, created as setup for scenarios that only need a place to exist. */
+	private static final String DEFAULT_NAME = "Test Place 3";
+
+	/** Address of the default place. */
+	private static final String DEFAULT_ADDRESS = "789 Test Road";
+
+	/** Phone number of the default place. */
+	private static final String DEFAULT_PHONE_NUMBER = "9999999999";
+
+	/** Language of the default place. */
+	private static final String DEFAULT_LANGUAGE = "English";
+
+	/** Website of the default place. */
+	private static final String DEFAULT_WEBSITE = "https://example.com/place3";
+
+	/** Type of the default place. */
+	private static final String DEFAULT_TYPES = "Engineer";
+
 	/**
 	 * Build the request body for the Add Place API.
 	 * The location (lat/lng) and accuracy are fixed test values.
@@ -57,5 +75,16 @@ public class TestDataBuilder {
 	 */
 	public String deletePlacePayload(String placeId) {
 		return "{\"place_id\": \"" + placeId + "\"}";
+	}
+
+	/**
+	 * Build an Add Place request body with fixed fake data, for scenarios that need a place to exist
+	 * but don't test its details.
+	 *
+	 * @return AddPlace payload with the default test values
+	 */
+	public AddPlace defaultAddPlacePayload() {
+		return addPlacePayload(DEFAULT_NAME, DEFAULT_ADDRESS, DEFAULT_PHONE_NUMBER, DEFAULT_LANGUAGE, DEFAULT_WEBSITE,
+				DEFAULT_TYPES);
 	}
 }

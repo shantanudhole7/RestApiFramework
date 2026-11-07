@@ -15,7 +15,9 @@ import java.util.Arrays;
 import java.util.Locale;
 
 import static Assertion.Assertions.assertEquals;
+import static Assertion.Assertions.assertHttpNotFound;
 import static Assertion.Assertions.assertHttpOk;
+import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logError;
 import static Logger.Log.logInformation;
 import static io.restassured.RestAssured.given;
@@ -81,8 +83,7 @@ public class StepDefinition extends Utils {
 	@Then("the API call succeeds with status code {int}")
 	public void theApiCallSucceedsWithStatusCode(Integer statusCode) {
 		logInformation("Verify the response status code is " + statusCode);
-		assertEquals("Verify response status code", statusCode, testContext.getResponse()
-		                                                                   .statusCode());
+		assertHttpStatus(testContext.getResponse(), statusCode);
 	}
 
 	/**
@@ -125,5 +126,25 @@ public class StepDefinition extends Utils {
 		logInformation("Verify that the response body contains " + key + " = " + expectedValue);
 		assertEquals("Verify that the response body contains " + key, expectedValue,
 		             getJsonPath(testContext.getResponse(), key));
+	}
+
+	/**
+	 * Fetch the place deleted earlier in the scenario and verify the API returns 404. Reads place_id from
+	 * TestContext (set by the @DeletePlace hook) and calls the given endpoint with GET.
+	 *
+	 * @param apiEndPoint endpoint name from GlobalEnum used to fetch the place, e.g. "GET_PLACE"
+	 * @throws IOException if Global.properties cannot be read
+	 */
+	@Then("the deleted place can no longer be fetched using {string}")
+	public void theDeletedPlaceCanNoLongerBeFetchedUsing(String apiEndPoint) throws IOException {
+		logInformation("Add place_id to the request specification for the next API call");
+		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
+		                                           .queryParam("place_id", testContext.getPlaceId()));
+
+		logInformation("Get the deleted place " + testContext.getPlaceId() + " with " + apiEndPoint);
+		userCallsWithHttpRequest(apiEndPoint, "GET");
+
+		logInformation("Verify the deleted place is not found");
+		assertHttpNotFound(testContext.getResponse());
 	}
 }

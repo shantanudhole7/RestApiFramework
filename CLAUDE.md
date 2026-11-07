@@ -38,7 +38,7 @@ and pull request.
 - `src/main/java/Pojo/` request models (`AddPlace`, `Location`), serialized by Jackson
 - `src/test/java/Api/PlaceApi` endpoint calls for hooks and setup (stateless, no assertions)
 - `src/test/java/Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
-  `assertHttpOk(response)`
+  `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404)
 - `src/test/java/Context/TestContext` per-scenario state, injected by cucumber-picocontainer
 - `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
 - `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints),
@@ -57,8 +57,8 @@ and pull request.
 - Settings only in `Global.properties`, read with `Utils.getPropertiesValue`; endpoints only in `GlobalEnum`.
 - Every request starts from `given().spec(defaultRequestSpecification())`; every response is checked with
   `.then().spec(defaultResponseSpecification())` (JSON content only; status codes are checked in the steps).
-- Verify only with `Assertions.assertEquals` / `assertHttpOk`, expected before actual, with a specific
-  `Verify ...` description.
+- Verify only through `Assertions` (`assertEquals`, `assertHttpStatus` and its shortcuts), expected before actual,
+  with a specific `Verify ...` description.
 - Log with `Log`; never `System.out`, never secrets.
 - Javadoc on every class and public method; single-class imports; format Java files with Ctrl+Alt+L, never `.md` files.
 - POJO fields camelCase; map snake_case JSON keys with `@JsonProperty("json_key")`.
@@ -108,3 +108,7 @@ Add one line per decision so future sessions keep it.
 - 2026-11-06: The HTTP-call step sends any method with RestAssured `request(Method, path)` instead of one branch per method.
 - 2026-11-06: Scenario state lives in `Context.TestContext`, injected by cucumber-picocontainer into step and hook classes; a new instance per scenario.
 - 2026-11-06: Setup calls outside the step flow go through `Api.PlaceApi`; the `@DeletePlace` hook creates the place each Delete scenario deletes.
+- 2026-11-07: Status checks go through `Assertions.assertHttpStatus(response, code)` and assert the exact code from
+  the API contract; `assertHttpOk` (200) and `assertHttpNotFound` (404) are named shortcuts.
+- 2026-11-07: A scenario that changes data verifies the change with a follow-up GET (Add: the place is found;
+  Delete: it is not found).

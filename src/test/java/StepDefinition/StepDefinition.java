@@ -17,6 +17,7 @@ import java.util.Locale;
 import static Assertion.Assertions.assertEquals;
 import static Assertion.Assertions.assertHttpNotFound;
 import static Assertion.Assertions.assertHttpOk;
+import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logError;
 import static Logger.Log.logInformation;
 import static io.restassured.RestAssured.given;
@@ -82,8 +83,7 @@ public class StepDefinition extends Utils {
 	@Then("the API call succeeds with status code {int}")
 	public void theApiCallSucceedsWithStatusCode(Integer statusCode) {
 		logInformation("Verify the response status code is " + statusCode);
-		assertEquals("Verify response status code", statusCode, testContext.getResponse()
-		                                                                   .statusCode());
+		assertHttpStatus(testContext.getResponse(), statusCode);
 	}
 
 	/**

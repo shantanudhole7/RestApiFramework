@@ -239,13 +239,20 @@ Feature: Place API
   instance per scenario and injects it into every step and hook class that takes it in its constructor.
 - Never share state through `static` fields, and never create glue classes with `new`: `new StepDefinition()`
   gets its own empty state, not the scenario's.
-- Hooks live in `StepDefinition/Hooks` and are scoped by tag (`@Before("@DeletePlace")`). Use them for setup and
-  cleanup the reader doesn't need to see; business setup the scenario is about stays a visible step.
+- Hooks live in `StepDefinition/Hooks`. Setup hooks are scoped by tag (`@Before("@DeletePlace")`), because
+  different scenarios need different data. Use them for setup the reader doesn't need to see; business setup the
+  scenario is about stays a visible step.
+- Teardown is driven by resource tracking, not by tags: whoever creates a place registers it at once with
+  `testContext.addCreatedPlaceId(id)` (before any check that could fail), and the untagged `@After` cleanup hook
+  deletes every tracked place after every scenario, passed or failed.
+- Cleanup never fails a scenario. 200 (deleted) and 404 (already gone) are logged as info; any other status or
+  exception is logged as a warning with the status and body.
 - Hooks depend on `TestContext`, `Api` classes and `TestDataBuilder`, never on step classes. When a hook creates
   data a step uses, add a `#` comment in the scenario that names the hook.
 - A setup hook verifies its own call (`assertHttpOk`), so a failed setup fails in the hook and skips the steps.
-- `Api` classes (`PlaceApi`) send one request each from the shared specs and return the `Response`: no state,
-  no assertions. Endpoints come from `GlobalEnum` constants (`GlobalEnum.ADD_PLACE`), not strings.
+- `Api` classes (`PlaceApi`) send one request each (`addPlace`, `deletePlace`) from the shared specs and return
+  the `Response`: no state, no assertions. Endpoints come from `GlobalEnum` constants (`GlobalEnum.ADD_PLACE`),
+  not strings.
 
 ## Checklist before opening a pull request
 

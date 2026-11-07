@@ -45,7 +45,8 @@ and pull request.
   `TestDataBuilder` (payloads), `Utils` (request/response specs, properties reader, JSON helper)
 - `src/test/java/Features/` Cucumber feature files (`PlaceApi.feature`)
 - `src/test/java/StepDefinition/StepDefinition` step definitions for the feature files
-- `src/test/java/StepDefinition/Hooks` tag-scoped setup (`@Before("@DeletePlace")` creates the place to delete)
+- `src/test/java/StepDefinition/Hooks` tag-scoped setup (`@Before("@DeletePlace")` creates the place to delete) and
+  an `@After` hook that deletes every place the scenario created
 - `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty` and JSON report plugins
 - `src/test/resources/logback-test.xml` log format and outputs
 - Generated, never edit or commit: `target/`, `requestLogs.txt`
@@ -85,6 +86,10 @@ and pull request.
 - `getJsonPath` returns `null` for a missing JSON path (and logs a warning); a `null` in an assertion usually
   means a wrong path or an error response.
 - `getPropertiesValue` returns `null` for a missing key (and logs a warning); check the key's spelling and case first.
+- Every place created in a scenario must be registered with `testContext.addCreatedPlaceId(...)`, or the `@After`
+  hook can't clean it up. The When step and the Delete setup hook already do this.
+- Cleanup log lines (`Cleanup: …`) appear after the last step; a `WARN | Cleanup: could not delete place` line
+  means a place may have been left on the live API.
 
 ## Decisions log
 
@@ -112,3 +117,5 @@ Add one line per decision so future sessions keep it.
   the API contract; `assertHttpOk` (200) and `assertHttpNotFound` (404) are named shortcuts.
 - 2026-11-07: A scenario that changes data verifies the change with a follow-up GET (Add: the place is found;
   Delete: it is not found).
+- 2026-11-07: Teardown uses resource tracking: places are registered in `TestContext` when created, and an untagged
+  `@After` hook deletes them after every scenario. Cleanup never fails a scenario (200/404 info, anything else warns).

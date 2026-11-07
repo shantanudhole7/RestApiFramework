@@ -2,6 +2,7 @@ package Api;
 
 import Pojo.AddPlace;
 import Resources.GlobalEnum;
+import Resources.TestDataBuilder;
 import Resources.Utils;
 import io.restassured.response.Response;
 
@@ -29,6 +30,26 @@ public class PlaceApi extends Utils {
 		              .body(payload)
 		              .when()
 		              .post(GlobalEnum.ADD_PLACE.getResource())
+		              .then()
+		              .spec(defaultResponseSpecification())
+		              .extract()
+		              .response();
+	}
+
+	/**
+	 * Delete a place through the Delete Place API.
+	 *
+	 * @param placeId id of the place to delete, as returned by the Add Place API
+	 * @return response of the Delete Place call; "status" is "OK" when the place was deleted
+	 * @throws IOException if Global.properties cannot be read
+	 */
+	public Response deletePlace(String placeId) throws IOException {
+		TestDataBuilder testDataBuilder = new TestDataBuilder();
+		logInformation("Delete place " + placeId + " with " + GlobalEnum.DELETE_PLACE);
+		return given().spec(defaultRequestSpecification())
+		              .body(testDataBuilder.deletePlacePayload(placeId))
+		              .when()
+		              .post(GlobalEnum.DELETE_PLACE.getResource())
 		              .then()
 		              .spec(defaultResponseSpecification())
 		              .extract()

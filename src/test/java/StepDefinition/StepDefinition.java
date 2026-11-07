@@ -51,6 +51,7 @@ public class StepDefinition extends Utils {
 	/**
 	 * Send the prepared request to the given endpoint and check the response against the shared JSON response spec.
 	 * Also called by other steps, e.g. to fetch a created place with GET.
+	 * After an ADD_PLACE call, registers the new place_id in TestContext for the cleanup hook.
 	 *
 	 * @param apiEndPoint endpoint name from GlobalEnum, e.g. "ADD_PLACE"
 	 * @param method      HTTP method name, case-insensitive, e.g. "POST", "GET", "DELETE"
@@ -58,8 +59,8 @@ public class StepDefinition extends Utils {
 	 */
 	@When("User calls {string} with {string} http request")
 	public void userCallsWithHttpRequest(String apiEndPoint, String method) {
-		String resource = GlobalEnum.valueOf(apiEndPoint)
-		                            .getResource();
+		GlobalEnum endpoint = GlobalEnum.valueOf(apiEndPoint);
+		String resource = endpoint.getResource();
 		logInformation("User calls '" + apiEndPoint + "' with '" + method + "' http request");
 
 		Method httpMethod;
@@ -78,6 +79,14 @@ public class StepDefinition extends Utils {
 		                               .extract()
 		                               .response();
 		testContext.setResponse(response);
+
+		// Register new places as soon as they exist, so cleanup deletes them even if a later step fails
+		if (endpoint == GlobalEnum.ADD_PLACE) {
+			String createdPlaceId = getJsonPath(response, "place_id");
+			if (createdPlaceId != null) {
+				testContext.addCreatedPlaceId(createdPlaceId);
+			}
+		}
 	}
 
 	@Then("the API call succeeds with status code {int}")

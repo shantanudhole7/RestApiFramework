@@ -3,6 +3,12 @@ package Context;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import static Logger.Log.logInformation;
+
 /**
  * State shared by the steps and hooks of one scenario.
  * Cucumber (cucumber-picocontainer) creates a new instance for every scenario and injects the same instance
@@ -13,6 +19,7 @@ public class TestContext {
 	private RequestSpecification requestSpecification;
 	private Response response;
 	private String placeId;
+	private final List<String> createdPlaceIds = new ArrayList<>();
 
 	/**
 	 * @return the request being prepared for the next API call
@@ -54,5 +61,22 @@ public class TestContext {
 	 */
 	public void setPlaceId(String placeId) {
 		this.placeId = placeId;
+	}
+
+	/**
+	 * Remember a place created in this scenario, so the cleanup hook deletes it after the scenario.
+	 *
+	 * @param placeId place_id returned by the Add Place API
+	 */
+	public void addCreatedPlaceId(String placeId) {
+		logInformation("Track place " + placeId + " for cleanup");
+		createdPlaceIds.add(placeId);
+	}
+
+	/**
+	 * @return place_ids created in this scenario, in creation order (read-only)
+	 */
+	public List<String> getCreatedPlaceIds() {
+		return Collections.unmodifiableList(createdPlaceIds);
 	}
 }

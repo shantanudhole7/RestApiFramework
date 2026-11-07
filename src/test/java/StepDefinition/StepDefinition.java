@@ -126,4 +126,10 @@ public class StepDefinition extends Utils {
 		assertEquals("Verify that the response body contains " + key, expectedValue,
 		             getJsonPath(testContext.getResponse(), key));
 	}
+
+	@Then("the deleted place can no longer be fetched using {string}")
+	public void theDeletedPlaceCanNoLongerBeFetchedUsing(String apiEndPoint) {
+		// Write code here that turns the phrase above into concrete actions
+		throw new io.cucumber.java.PendingException();
+	}
 }

@@ -21,3 +21,4 @@ Feature: Place API
     When User calls "DELETE_PLACE" with "POST" http request
     Then the API call succeeds with status code 200
     And "status" in response body is "OK"
+    And the deleted place can no longer be fetched using "GET_PLACE"

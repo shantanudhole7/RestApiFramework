@@ -6,7 +6,20 @@ import org.junit.Assert;
 import static Logger.Log.logError;
 import static Logger.Log.logInformation;
 
+/**
+ * Logging assertions: every check logs a PASS or FAIL line with expected and actual values.
+ */
 public class Assertions {
+
+	/**
+	 * HTTP status for a successful request.
+	 */
+	private static final int HTTP_OK = 200;
+
+	/**
+	 * HTTP status for a resource that doesn't exist.
+	 */
+	private static final int HTTP_NOT_FOUND = 404;
 
 	/**
 	 * Assert that two values are equal, and log the result as a PASS or FAIL line.
@@ -28,16 +41,35 @@ public class Assertions {
 	}
 
 	/**
-	 * Assert that an API response has HTTP status 200 (OK), and log the result as a PASS or FAIL line.
+	 * Assert that an API response has the expected HTTP status, and log the result as a PASS or FAIL line.
 	 * On failure the response body is logged too, since it usually explains the error.
+	 *
+	 * @param response       the API response to check
+	 * @param expectedStatus the expected HTTP status code, e.g. 200
+	 */
+	public static void assertHttpStatus(Response response, int expectedStatus) {
+		int statusCode = response.statusCode();
+		if (statusCode != expectedStatus) {
+			logError("Unexpected status " + statusCode + " | Body: " + response.asString());
+		}
+		assertEquals("Verify that api returns " + expectedStatus, expectedStatus, statusCode);
+	}
+
+	/**
+	 * Assert that an API response has HTTP status 200 (OK).
 	 *
 	 * @param response the API response to check
 	 */
 	public static void assertHttpOk(Response response) {
-		int statusCode = response.statusCode();
-		if (statusCode != 200) {
-			logError("Unexpected status " + statusCode + " | Body: " + response.asString());
-		}
-		assertEquals("Verify that api returns 200", 200, statusCode);
+		assertHttpStatus(response, HTTP_OK);
+	}
+
+	/**
+	 * Assert that an API response has HTTP status 404 (Not Found), e.g. when fetching a deleted resource.
+	 *
+	 * @param response the API response to check
+	 */
+	public static void assertHttpNotFound(Response response) {
+		assertHttpStatus(response, HTTP_NOT_FOUND);
 	}
 }

@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 import static Assertion.Assertions.assertEquals;
+import static Assertion.Assertions.assertHttpNotFound;
 import static Assertion.Assertions.assertHttpOk;
 import static Logger.Log.logError;
 import static Logger.Log.logInformation;
@@ -127,9 +128,23 @@ public class StepDefinition extends Utils {
 		             getJsonPath(testContext.getResponse(), key));
 	}
 
+	/**
+	 * Fetch the place deleted earlier in the scenario and verify the API returns 404. Reads place_id from
+	 * TestContext (set by the @DeletePlace hook) and calls the given endpoint with GET.
+	 *
+	 * @param apiEndPoint endpoint name from GlobalEnum used to fetch the place, e.g. "GET_PLACE"
+	 * @throws IOException if Global.properties cannot be read
+	 */
 	@Then("the deleted place can no longer be fetched using {string}")
-	public void theDeletedPlaceCanNoLongerBeFetchedUsing(String apiEndPoint) {
-		// Write code here that turns the phrase above into concrete actions
-		throw new io.cucumber.java.PendingException();
+	public void theDeletedPlaceCanNoLongerBeFetchedUsing(String apiEndPoint) throws IOException {
+		logInformation("Add place_id to the request specification for the next API call");
+		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
+		                                           .queryParam("place_id", testContext.getPlaceId()));
+
+		logInformation("Get the deleted place " + testContext.getPlaceId() + " with " + apiEndPoint);
+		userCallsWithHttpRequest(apiEndPoint, "GET");
+
+		logInformation("Verify the deleted place is not found");
+		assertHttpNotFound(testContext.getResponse());
 	}
 }

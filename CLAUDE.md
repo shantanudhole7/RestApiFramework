@@ -52,7 +52,7 @@ and pull request.
 - `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty`, Cucumber HTML and Allure plugins
 - `src/test/resources/allure.properties` Allure results folder (`target/allure-results`)
 - `src/test/resources/logback-test.xml` log format and outputs
-- Generated, never edit or commit: `target/`, `requestLogs.txt`, `.allure/`.
+- Generated, never edit or commit: `target/`, `requestLogs.txt`, `.allure/` (Allure tool downloaded by `allure:serve`)
 
 ## Conventions (summary; the skill has the full detail)
 

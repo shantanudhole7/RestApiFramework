@@ -178,7 +178,7 @@ src/
 ## 14. Generated files
 
 Never commit build output or IDE files. `.gitignore` covers:
-`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/`
+`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/`.
 
 ## 15. Git workflow
 
@@ -282,3 +282,4 @@ Feature: Place API
 - [ ] Only this topic's files staged
 - [ ] Shared state through `TestContext` only: no `static` state, no `new StepDefinition()`
 - [ ] A new or changed rule is applied to existing code too: search for the old pattern and fix every match
+- [ ] After adding a tool or plugin, run it once and check `git status`: generated files go in `.gitignore`

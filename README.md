@@ -60,7 +60,8 @@ RestApiFramework/
 └── README.md
 ```
 
-Generated and never committed: `target/` (build output and logs) and `requestLogs.txt`.
+Generated and never committed: `target/` (build output, logs and reports), `requestLogs.txt` and `.allure/` (the
+Allure tool downloaded by `allure:serve`).
 
 ---
 
@@ -149,7 +150,7 @@ Every request starts from one shared specification, built once per run by `Utils
 - base URI and API key from `Global.properties`
 - JSON content type
 - every request and response logged to `requestLogs.txt`
-- every request and response attached to the Allure report (\AllureRestAssured` filter)`
+- every request and response attached to the Allure report (`AllureRestAssured` filter)
 
 ```java
 given().spec(defaultRequestSpecification()).body(payload)

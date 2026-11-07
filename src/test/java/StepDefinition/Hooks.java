@@ -41,7 +41,12 @@ public class Hooks {
 		TestDataBuilder testDataBuilder = new TestDataBuilder();
 
 		Response response = placeApi.addPlace(testDataBuilder.defaultAddPlacePayload());
+		String placeId = placeApi.getJsonPath(response, "place_id");
+		if (placeId != null) {
+			// Track before the status check, so the place is cleaned up even if the check fails
+			testContext.addCreatedPlaceId(placeId);
+		}
 		assertHttpOk(response);
-		testContext.setPlaceId(placeApi.getJsonPath(response, "place_id"));
+		testContext.setPlaceId(placeId);
 	}
 }

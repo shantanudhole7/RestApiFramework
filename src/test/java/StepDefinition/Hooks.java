@@ -20,13 +20,13 @@ import static Logger.Log.logWarning;
  */
 public class Hooks {
 
-	private final TestContext testContext;
-
 	/** Delete Place status when the place was deleted. */
 	private static final int HTTP_OK = 200;
 
 	/** Delete Place status when the place no longer exists. */
 	private static final int HTTP_NOT_FOUND = 404;
+
+	private final TestContext testContext;
 
 	/**
 	 * Cucumber injects the same TestContext the scenario's steps use (cucumber-picocontainer),

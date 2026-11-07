@@ -47,7 +47,7 @@ RestApiFramework/
 │       │   ├── Features/
 │       │   │   └── PlaceApi.feature          # Place API scenarios
 │       │   ├── StepDefinition/
-│       │   │   ├── Hooks.java                # Tag-scoped setup: creates the place for @DeletePlace
+│       │   │   ├── Hooks.java                # Setup for @DeletePlace, and cleanup of created places
 │       │   │   └── StepDefinition.java       # Step definitions for the feature files
 │       │   └── cucumber/Options/
 │       │       └── TestRunner.java           # JUnit runner: features path, glue, report plugins
@@ -227,6 +227,20 @@ public void createPlaceForDelete() throws IOException {
 
 Hooks call the API through `Api/PlaceApi`, not through step methods. `PlaceApi` sends one request from the shared
 specs and returns the `Response`; it keeps no state and makes no assertions, so the caller decides what to check.
+
+After every scenario, passed or failed, an untagged `@After` hook deletes every place the scenario created. Places
+are registered in `TestContext` the moment they are created (by the http request step after `ADD_PLACE`, and by the
+setup hook), so a scenario that fails halfway still cleans up. Cleanup never fails a scenario: a place that is
+already gone is logged as info, and any other problem as a warning.
+
+```java
+@After
+public void cleanUpCreatedPlaces() {
+    for (String placeId : testContext.getCreatedPlaceIds()) {
+        Response response = placeApi.deletePlace(placeId);   // 200 deleted, 404 already gone, else warning
+    }
+}
+```
 
 ### Scenarios and step definitions
 

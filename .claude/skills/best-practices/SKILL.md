@@ -1,6 +1,6 @@
 ---
 name: best-practices
-description: Java + REST Assured + Cucumber API test automation standards for this project — project layout, naming, POJOs, configuration, endpoints, request and response specifications, response reading, assertions, logging, feature files, step definitions, hooks, scenario state (TestContext), API classes, Javadoc, formatting, dependencies and Git workflow. Use this skill whenever writing, generating, reviewing, refactoring, or debugging any POJO, utility, assertion, logger call, config value, endpoint, feature file, step definition, hook, TestContext or API class in this project, even if the request doesn't mention "best practices".
+description: Java + REST Assured + Cucumber API test automation standards for this project — project layout, naming, POJOs, configuration, endpoints, request and response specifications, response reading, assertions, logging, feature files, step definitions, hooks, scenario state (TestContext), API classes, reporting (Allure), Javadoc, formatting, dependencies and Git workflow. Use this skill whenever writing, generating, reviewing, refactoring, or debugging any POJO, utility, assertion, logger call, config value, endpoint, feature file, step definition, hook, TestContext, API class, TestRunner or report setup in this project, even if the request doesn't mention "best practices".
 user-invocable: false
 ---
 
@@ -30,7 +30,8 @@ src/
 │   └── cucumber/Options/
 │       └── TestRunner            # JUnit runner: features path, glue, report plugins
 └── test/resources/
-    └── logback-test.xml          # Log format and outputs
+    ├── logback-test.xml          # Log format and outputs
+    └── allure.properties         # Allure results folder (target/allure-results)
 ```
 
 - Models that describe the API's JSON go in `src/main/java/Pojo`.
@@ -99,7 +100,7 @@ src/
 
 - Every request starts from the shared spec: `given().spec(defaultRequestSpecification())`.
 - The request spec is built once per run with the base URI, API key, JSON content type, and request/response
-  logging to `requestLogs.txt`. Don't build a second spec or add these settings again per request.
+  logging to `requestLogs.txt` and the `AllureRestAssured` filter. Don't build a second spec or add these settings again per request.
 - Every response is checked against the shared response spec with
   `.then().spec(defaultResponseSpecification()).extract().response()`. It only expects JSON content;
   status codes are verified in the steps, so each scenario can expect its own code and the check is logged.
@@ -177,7 +178,7 @@ src/
 ## 14. Generated files
 
 Never commit build output or IDE files. `.gitignore` covers:
-`target/`, `.idea/`, `*.iml`, `requestLogs.txt`.
+`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/`.
 
 ## 15. Git workflow
 
@@ -254,6 +255,19 @@ Feature: Place API
   the `Response`: no state, no assertions. Endpoints come from `GlobalEnum` constants (`GlobalEnum.ADD_PLACE`),
   not strings.
 
+## 18. Reporting
+
+- `TestRunner` writes two reports: Allure results to `target/allure-results` (open with Maven → Plugins → allure →
+  `allure:serve`) and a single-file Cucumber report to `target/cucumber-reports/cucumber.html`.
+- Reports are written only when `TestRunner` (or `mvn test`) runs. The green arrow in a `.feature` file uses
+  IntelliJ's own Cucumber configuration and ignores `@CucumberOptions`.
+- Requests and responses reach the Allure report through the `AllureRestAssured` filter on the shared request spec.
+  Never add it per request; every call already gets it from the shared spec.
+- Never put real secrets in requests that are attached to the report: mask them first. The current `api.key` is
+  the public demo key.
+- Allure modules are versioned through `allure-bom` (one `allure.version` property). The project stays on the
+  Allure Java 2.x line until the pom targets Java 17, which Allure 3 requires.
+
 ## Checklist before opening a pull request
 
 - [ ] Compiles: Maven → Lifecycle → test-compile shows BUILD SUCCESS
@@ -268,3 +282,4 @@ Feature: Place API
 - [ ] Only this topic's files staged
 - [ ] Shared state through `TestContext` only: no `static` state, no `new StepDefinition()`
 - [ ] A new or changed rule is applied to existing code too: search for the old pattern and fix every match
+- [ ] After adding a tool or plugin, run it once and check `git status`: generated files go in `.gitignore`

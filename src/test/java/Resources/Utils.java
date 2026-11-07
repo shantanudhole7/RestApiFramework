@@ -1,5 +1,7 @@
 package Resources;
 
+import io.qameta.allure.restassured.AllureRestAssured;
+
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.filter.log.RequestLoggingFilter;
@@ -74,8 +76,8 @@ public class Utils {
 
 	/**
 	 * Build the base request specification shared by every Place API call:
-	 * base URI and API key from Global.properties, JSON content type, and
-	 * request/response logging to requestLogs.txt.
+	 * base URI and API key from Global.properties, JSON content type,
+	 * request/response logging to requestLogs.txt, and every request and response attached to the Allure report.
 	 * Built once per run and reused, so all calls log to the same file.
 	 *
 	 * @return the shared RequestSpecification
@@ -92,9 +94,10 @@ public class Utils {
 					.setContentType(ContentType.JSON)
 					.addFilter(RequestLoggingFilter.logRequestTo(requestLogs))
 					.addFilter(ResponseLoggingFilter.logResponseTo(requestLogs))
+					.addFilter(new AllureRestAssured())
 					.build();
 			logInformation("Request specification created | Base URI: " + baseUri
-					+ " | Requests and responses logged to " + REQUEST_LOG_FILE);
+					               + " | Requests and responses logged to " + REQUEST_LOG_FILE);
 		}
 		return requestSpecification;
 	}

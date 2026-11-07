@@ -16,6 +16,7 @@ built from POJOs and a shared request specification, and every check is logged a
 | Jackson          | Serializes POJOs to JSON request bodies                          |
 | Cucumber + JUnit | BDD scenarios in Gherkin, step definitions, test runner          |
 | PicoContainer    | Injects one shared TestContext per scenario into steps and hooks |
+| Allure           | Test report with every request and response attached per step    |
 | SLF4J + Logback  | Framework logging: console and one log file per run              |
 
 ---
@@ -52,13 +53,15 @@ RestApiFramework/
 │       │   └── cucumber/Options/
 │       │       └── TestRunner.java           # JUnit runner: features path, glue, report plugins
 │       └── resources/
-│           └── logback-test.xml              # Log format and outputs
+│           ├── logback-test.xml              # Log format and outputs
+│           └── allure.properties             # Allure results folder
 ├── CLAUDE.md                                 # Project context and rules for Claude Code
 ├── pom.xml                                   # Dependencies and plugins
 └── README.md
 ```
 
-Generated and never committed: `target/` (build output and logs) and `requestLogs.txt`.
+Generated and never committed: `target/` (build output, logs and reports), `requestLogs.txt` and `.allure/` (the
+Allure tool downloaded by `allure:serve`).
 
 ---
 
@@ -112,6 +115,17 @@ Tags: `@PlaceApi` (every Place API scenario), `@AddPlace`, `@DeletePlace`, `@Smo
 **Note:** `pom.xml` sets `testFailureIgnore = true`, so Maven reports **BUILD SUCCESS even when scenarios fail**.
 Always check the test results in the console (`pretty` output) or the report.
 
+### Reports
+
+Run `TestRunner` (or `mvn test`), then:
+
+| Report        | How to open                                               | What it shows                                                                                      |
+|---------------|-----------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| Allure        | Maven tool window → Plugins → allure → `allure:serve`     | Scenarios, steps, hooks, timings, and every request and response attached to the step that sent it |
+| Cucumber HTML | Open `target/cucumber-reports/cucumber.html` in a browser | Quick single-file overview, filterable by tag                                                      |
+
+Running a scenario from the green arrow in the `.feature` file doesn't write reports.
+
 ---
 
 ## How the Framework Works
@@ -136,6 +150,7 @@ Every request starts from one shared specification, built once per run by `Utils
 - base URI and API key from `Global.properties`
 - JSON content type
 - every request and response logged to `requestLogs.txt`
+- every request and response attached to the Allure report (`AllureRestAssured` filter)
 
 ```java
 given().spec(defaultRequestSpecification()).body(payload)
@@ -220,8 +235,10 @@ in any order:
 @Before("@DeletePlace")
 public void createPlaceForDelete() throws IOException {
     Response response = placeApi.addPlace(testDataBuilder.defaultAddPlacePayload());
+    String placeId = placeApi.getJsonPath(response, "place_id");
+    testContext.addCreatedPlaceId(placeId);   // tracked before the check, so cleanup still deletes it
     assertHttpOk(response);
-    testContext.setPlaceId(placeApi.getJsonPath(response, "place_id"));
+    testContext.setPlaceId(placeId);
 }
 ```
 
@@ -283,8 +300,8 @@ Each step maps to a method in `StepDefinition` by its exact text:
 - **`the deleted place can no longer be fetched using "GET_PLACE"`** calls `GET_PLACE` with the deleted `place_id`
   and expects 404 Not Found.
 
-`TestRunner` runs every feature file with JUnit, prints each step (`pretty`), and writes a JSON report to
-`target/jsonReports/`.
+`TestRunner` runs every feature file with JUnit, prints each step (`pretty`), and writes the Allure results and the
+Cucumber HTML report (see [Reports](#reports)).
 
 ---
 
@@ -311,7 +328,7 @@ Branch names must start with `feature/`.
 ## Claude Code Skills
 
 - **best-practices:** the project's coding standards (layout, naming, POJOs, config, endpoints, requests,
-  assertions, logging, Javadoc, scenario state, hooks and the API layer, Git workflow). Claude Code applies it
+  assertions, logging, Javadoc, scenario state, hooks and the API layer, reporting, Git workflow). Claude Code applies it
   automatically when writing or changing code.
 - **test-review:** reviews feature files, step definitions and framework code against those standards, including
   that every step matches its definition and uses its parameters. Run `/test-review` for everything, or

@@ -5,51 +5,22 @@
     <artifactId>APIFramework</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <testFailureIgnore>true</testFailureIgnore>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>net.masterthought</groupId>
-                <artifactId>maven-cucumber-reporting</artifactId>
-                <version>5.8.1</version>
-                <executions>
-                    <execution>
-                        <id>execution</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                        <configuration>
-                            <projectName>cucumber-jvm-example</projectName>
-                            <!-- optional, per documentation set this to "true" to bypass generation of Cucumber Reports entirely, defaults to false if not specified -->
-                            <skip>false</skip>
-                            <!-- output directory for the generated report -->
-                            <outputDirectory>${project.build.directory}</outputDirectory>
-                            <!-- optional, defaults to outputDirectory if not specified -->
-                            <inputDirectory>${project.build.directory}/jsonReports</inputDirectory>
-                            <jsonFiles>
-                                <!-- supports wildcard or name pattern -->
-                                <param>**/*.json</param>
-                            </jsonFiles>
-                            <!-- optional, defaults to outputDirectory if not specified -->
-                            <!-- optional, set true to group features by its Ids -->
-                            <mergeFeaturesById>false</mergeFeaturesById>
-                            <!-- optional, set true to get a final report with latest results of the same test from different test runs -->
-                            <mergeFeaturesWithRetest>false</mergeFeaturesWithRetest>
-                            <!-- optional, set true to fail build on test failures -->
-                            <checkBuildResult>false</checkBuildResult>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+    <properties>
+        <allure.version>2.29.1</allure.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Keeps every Allure module on the same version -->
+            <dependency>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-bom</artifactId>
+                <version>${allure.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
 
@@ -66,6 +37,7 @@
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-java</artifactId>
             <version>7.17.0</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/io.cucumber/cucumber-junit -->
@@ -99,5 +71,40 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/io.qameta.allure/allure-cucumber7-jvm -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-cucumber7-jvm</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/io.qameta.allure/allure-rest-assured -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <testFailureIgnore>true</testFailureIgnore>
+                </configuration>
+            </plugin>
+            <!-- Opens the HTML report from target/allure-results: Maven → Plugins → allure → allure:serve -->
+            <plugin>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-maven</artifactId>
+                <version>2.12.0</version>
+                <configuration>
+                    <reportVersion>2.29.0</reportVersion>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

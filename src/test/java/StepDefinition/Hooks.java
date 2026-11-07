@@ -3,20 +3,30 @@ package StepDefinition;
 import Api.PlaceApi;
 import Context.TestContext;
 import Resources.TestDataBuilder;
+import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.restassured.response.Response;
 
 import java.io.IOException;
+import java.util.List;
 
 import static Assertion.Assertions.assertHttpOk;
 import static Logger.Log.logInformation;
+import static Logger.Log.logWarning;
 
 /**
- * Cucumber hooks: setup that runs before scenarios, selected by tag.
+ * Cucumber hooks: setup and cleanup that run around scenarios. Setup hooks are selected by tag;
+ * the cleanup hook runs after every scenario.
  */
 public class Hooks {
 
 	private final TestContext testContext;
+
+	/** Delete Place status when the place was deleted. */
+	private static final int HTTP_OK = 200;
+
+	/** Delete Place status when the place no longer exists. */
+	private static final int HTTP_NOT_FOUND = 404;
 
 	/**
 	 * Cucumber injects the same TestContext the scenario's steps use (cucumber-picocontainer),
@@ -48,5 +58,36 @@ public class Hooks {
 		}
 		assertHttpOk(response);
 		testContext.setPlaceId(placeId);
+	}
+
+	/**
+	 * Delete every place created in the scenario, whether the scenario passed or failed.
+	 * Cleanup never fails the scenario: a place that can't be deleted is logged as a warning instead.
+	 */
+	@After
+	public void cleanUpCreatedPlaces() {
+		List<String> placeIds = testContext.getCreatedPlaceIds();
+		if (placeIds.isEmpty()) {
+			return;
+		}
+
+		PlaceApi placeApi = new PlaceApi();
+		for (String placeId : placeIds) {
+			try {
+				Response response = placeApi.deletePlace(placeId);
+				int statusCode = response.statusCode();
+				if (statusCode == HTTP_OK) {
+					logInformation("Cleanup: deleted place " + placeId);
+				} else if (statusCode == HTTP_NOT_FOUND) {
+					logInformation("Cleanup: place " + placeId + " was already deleted");
+				} else {
+					logWarning("Cleanup: could not delete place " + placeId + " | Status: " + statusCode
+							           + " | Body: " + response.asString());
+				}
+			} catch (Exception | AssertionError e) {
+				// AssertionError too: the shared response spec throws it for a non-JSON response
+				logWarning("Cleanup: could not delete place " + placeId + " | " + e.getMessage());
+			}
+		}
 	}
 }

@@ -32,6 +32,8 @@ and pull request.
 - Run all scenarios: `mvn test`, or run `TestRunner` in IntelliJ (green arrow next to the class)
 - Run by tag: `mvn test -Dcucumber.filter.tags="@AddPlace"`
 - Run one scenario: green arrow next to it in the `.feature` file
+- Open the Allure report: Maven tool window → Plugins → allure → `allure:serve` (after running `TestRunner`)
+- Quick report without Maven: open `target/cucumber-reports/cucumber.html` in a browser
 
 ## Layout
 
@@ -47,9 +49,10 @@ and pull request.
 - `src/test/java/StepDefinition/StepDefinition` step definitions for the feature files
 - `src/test/java/StepDefinition/Hooks` tag-scoped setup (`@Before("@DeletePlace")` creates the place to delete) and
   an `@After` hook that deletes every place the scenario created
-- `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty` and JSON report plugins
+- `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty`, Cucumber HTML and Allure plugins
+- `src/test/resources/allure.properties` Allure results folder (`target/allure-results`)
 - `src/test/resources/logback-test.xml` log format and outputs
-- Generated, never edit or commit: `target/`, `requestLogs.txt`
+- Generated, never edit or commit: `target/`, `requestLogs.txt`, `.allure/`.
 
 ## Conventions (summary; the skill has the full detail)
 
@@ -90,6 +93,9 @@ and pull request.
   hook can't clean it up. The When step and the Delete setup hook already do this.
 - Cleanup log lines (`Cleanup: …`) appear after the last step; a `WARN | Cleanup: could not delete place` line
   means a place may have been left on the live API.
+- Reports are written only when `TestRunner` (or `mvn test`) runs; the green arrow in a `.feature` file ignores
+  `@CucumberOptions`, so no Allure or HTML report is produced.
+- `allure:serve` serves the report on the machine's network IP while it runs; stop it when done.
 
 ## Decisions log
 
@@ -119,3 +125,5 @@ Add one line per decision so future sessions keep it.
   Delete: it is not found).
 - 2026-11-07: Teardown uses resource tracking: places are registered in `TestContext` when created, and an untagged
   `@After` hook deletes them after every scenario. Cleanup never fails a scenario (200/404 info, anything else warns).
+- 2026-11-07: Reporting uses Allure (2.x line, via `allure-bom`) with the `AllureRestAssured` filter on the shared
+  request spec, plus Cucumber's single-file HTML report; the masterthought plugin and the JSON output are removed.

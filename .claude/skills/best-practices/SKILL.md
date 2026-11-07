@@ -118,8 +118,11 @@ src/
 
 - Verify only through `Assertions`:
   - `assertEquals(description, expected, actual)` for any value.
-  - `assertHttpOk(response)` for an HTTP 200 status; it also logs the response body when the status is wrong.
-- Both log `PASS | ...` or `FAIL | ...` with expected and actual values, then re-throw on failure.
+  - `assertHttpStatus(response, code)` for an exact HTTP status; it also logs the response body when the status
+    is wrong. Assert the exact code from the API contract, not just "any 2xx".
+  - `assertHttpOk(response)` (200) and `assertHttpNotFound(response)` (404) are named shortcuts for it. Add a new
+    shortcut only for a status that several steps check.
+- All of them log `PASS | ...` or `FAIL | ...` with expected and actual values, then re-throw on failure.
 - Don't call JUnit's `assertEquals` directly in tests; the result would not be logged.
 - **Expected before actual**, always. Reversed, failures read the wrong way round.
 - The description starts with `Verify` and names what is being checked:
@@ -211,6 +214,8 @@ Feature: Place API
 
 - One feature file per API area, with a feature-level tag (`@PlaceApi`) and a one-line description.
 - Scenario names say what is verified, as a short sentence that matches the steps actually in it.
+- A scenario that changes data verifies the change with a follow-up read, not just the call's own response:
+  after Add, GET finds the place; after Delete, GET no longer finds it.
 - Every scenario has an area tag (`@AddPlace`) and a suite tag (`@Smoke` or `@Regression`).
 - Steps are written in plain language. Values are passed as quoted strings or numbers, never as code
   (`"Engineer"`, not `"['Engineer']"`).

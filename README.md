@@ -35,7 +35,7 @@ RestApiFramework/
 │       ├── java/
 │       │   ├── Api/
 │       │   │   └── PlaceApi.java             # Endpoint calls for hooks and setup; returns the response
-│       │   ├── Assertion/                    # Assertions: logging assertEquals (PASS/FAIL lines)
+│       │   ├── Assertion/                    # Assertions: logging assertEquals and HTTP status checks (PASS/FAIL)
 │       │   ├── Context/
 │       │   │   └── TestContext.java          # Per-scenario state: request, response, place_id
 │       │   ├── Logger/                       # Log: logInformation, logWarning, logError
@@ -192,8 +192,10 @@ with both values and re-throws on failure:
 19:40:56 | INFO  | PASS | Verify status in response body | Expected: OK | Actual: OK
 ```
 
-`Assertions.assertHttpOk(response)` checks for HTTP status 200 the same way, and also logs the response body when the
-status is wrong, since it usually explains the error.
+`Assertions.assertHttpStatus(response, code)` checks for an exact HTTP status the same way, and also logs the
+response body when the status is wrong, since it usually explains the error. `assertHttpOk(response)` (200) and
+`assertHttpNotFound(response)` (404) are named shortcuts for it. Steps assert the exact code from the API contract,
+not just "any 2xx".
 
 Other messages go through `Log.logInformation`, `logWarning` and `logError`. Logs are written to the console and
 to one file per run in `target/logs/test_run_<timestamp>.log`, as configured in `logback-test.xml`.
@@ -253,6 +255,7 @@ Feature: Place API
     When User calls "DELETE_PLACE" with "POST" http request
     Then the API call succeeds with status code 200
     And "status" in response body is "OK"
+    And the deleted place can no longer be fetched using "GET_PLACE"
 ```
 
 Each step maps to a method in `StepDefinition` by its exact text:
@@ -263,6 +266,8 @@ Each step maps to a method in `StepDefinition` by its exact text:
 - **`the place created maps to "<Name>" using "GET_PLACE"`** reads `place_id` from the response, calls `GET_PLACE`
   with it, and checks the name.
 - **`"<key>" in response body is "<value>"`** reads any JSON key from the last response and checks its value.
+- **`the deleted place can no longer be fetched using "GET_PLACE"`** calls `GET_PLACE` with the deleted `place_id`
+  and expects 404 Not Found.
 
 `TestRunner` runs every feature file with JUnit, prints each step (`pretty`), and writes a JSON report to
 `target/jsonReports/`.

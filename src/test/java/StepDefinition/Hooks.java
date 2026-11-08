@@ -1,6 +1,7 @@
 package StepDefinition;
 
 import Api.PlaceApi;
+import Api.ProductApi;
 import Context.TestContext;
 import Resources.TestDataBuilder;
 import io.cucumber.java.After;
@@ -92,6 +93,37 @@ public class Hooks {
 			} catch (Exception | AssertionError e) {
 				// AssertionError too: the shared response spec throws it for a non-JSON response
 				logWarning("Cleanup: could not delete place " + placeId + " | " + e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * Delete every product created in the scenario, whether the scenario passed or failed.
+	 * Cleanup never fails the scenario: a product that can't be deleted is logged as a warning instead.
+	 */
+	@After
+	public void cleanUpCreatedProducts() {
+		List<String> productIds = testContext.getCreatedProductIds();
+		if (productIds.isEmpty()) {
+			return;
+		}
+
+		ProductApi productApi = new ProductApi();
+		for (String productId : productIds) {
+			try {
+				Response response = productApi.deleteProduct(productId, testContext.getAuthSession());
+				int statusCode = response.statusCode();
+				if (statusCode == HTTP_OK) {
+					logInformation("Cleanup: deleted product " + productId);
+				} else if (statusCode == HTTP_NOT_FOUND) {
+					logInformation("Cleanup: product " + productId + " was already deleted");
+				} else {
+					logWarning("Cleanup: could not delete product " + productId + " | Status: " + statusCode
+							           + " | Body: " + response.asString());
+				}
+			} catch (Exception | AssertionError e) {
+				// AssertionError too: the shared response spec throws it for a non-JSON response
+				logWarning("Cleanup: could not delete product " + productId + " | " + e.getMessage());
 			}
 		}
 	}

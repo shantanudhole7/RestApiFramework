@@ -60,4 +60,25 @@ public class ProductApi {
 		                                             .extract()
 		                                             .response();
 	}
+
+	/**
+	 * Delete a product through the Delete Product API.
+	 *
+	 * @param productId id of the product to delete, as returned by the Create Product API
+	 * @param session   the logged-in session
+	 * @return response of the Delete Product call
+	 * @throws IOException if Global.properties cannot be read
+	 */
+	public Response deleteProduct(String productId, AuthSession session) throws IOException {
+		logInformation("Delete product " + productId + " with " + GlobalEnum.DELETE_PRODUCT);
+		return given().spec(ecomRequestSpecification())
+		              .header(AUTHORIZATION_HEADER, session.getToken())
+		              .pathParam("productId", productId)
+		              .when()
+		              .delete(GlobalEnum.DELETE_PRODUCT.getResource())
+		              .then()
+		              .spec(defaultResponseSpecification())
+		              .extract()
+		              .response();
+	}
 }

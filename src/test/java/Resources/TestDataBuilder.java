@@ -5,37 +5,56 @@ import java.util.List;
 
 import Pojo.AddPlace;
 import Pojo.Location;
+import Pojo.Login;
 
 /**
  * Builds request bodies for the Place API.
  */
 public class TestDataBuilder {
 
-	/** Fixed test latitude sent with every new place. */
+	/**
+	 * Fixed test latitude sent with every new place.
+	 */
 	private static final double LATITUDE = -38.383494;
 
-	/** Fixed test longitude sent with every new place. */
+	/**
+	 * Fixed test longitude sent with every new place.
+	 */
 	private static final double LONGITUDE = 33.427362;
 
-	/** Fixed location accuracy, in metres, sent with every new place. */
+	/**
+	 * Fixed location accuracy, in metres, sent with every new place.
+	 */
 	private static final int ACCURACY = 50;
 
-	/** Name of the default place, created as setup for scenarios that only need a place to exist. */
+	/**
+	 * Name of the default place, created as setup for scenarios that only need a place to exist.
+	 */
 	private static final String DEFAULT_NAME = "Test Place 3";
 
-	/** Address of the default place. */
+	/**
+	 * Address of the default place.
+	 */
 	private static final String DEFAULT_ADDRESS = "789 Test Road";
 
-	/** Phone number of the default place. */
+	/**
+	 * Phone number of the default place.
+	 */
 	private static final String DEFAULT_PHONE_NUMBER = "9999999999";
 
-	/** Language of the default place. */
+	/**
+	 * Language of the default place.
+	 */
 	private static final String DEFAULT_LANGUAGE = "English";
 
-	/** Website of the default place. */
+	/**
+	 * Website of the default place.
+	 */
 	private static final String DEFAULT_WEBSITE = "https://example.com/place3";
 
-	/** Type of the default place. */
+	/**
+	 * Type of the default place.
+	 */
 	private static final String DEFAULT_TYPES = "Engineer";
 
 	/**
@@ -85,6 +104,18 @@ public class TestDataBuilder {
 	 */
 	public AddPlace defaultAddPlacePayload() {
 		return addPlacePayload(DEFAULT_NAME, DEFAULT_ADDRESS, DEFAULT_PHONE_NUMBER, DEFAULT_LANGUAGE, DEFAULT_WEBSITE,
-				DEFAULT_TYPES);
+		                       DEFAULT_TYPES);
+	}
+
+	/**
+	 * Build the request body for the e-commerce Login API.
+	 *
+	 * @param userEmail    the login email, read from the environment
+	 * @param userPassword the login password, read from the environment
+	 * @return Login payload, serialized to JSON by Jackson when sent
+	 */
+	public Login loginPayload(String userEmail, String userPassword) {
+		return new Login().setUserEmail(userEmail)
+		                  .setUserPassword(userPassword);
 	}
 }

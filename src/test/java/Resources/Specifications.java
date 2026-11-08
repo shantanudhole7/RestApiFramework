@@ -91,7 +91,6 @@ public final class Specifications {
 		return defaultResponseSpecification;
 	}
 
-
 	/**
 	 * Build a request specification for requests that carry credentials, such as login: base URI and JSON content
 	 * type only, with no logging and no Allure filter, so passwords and tokens never reach a log file or a report.
@@ -100,7 +99,7 @@ public final class Specifications {
 	 * @return the unlogged RequestSpecification
 	 * @throws IOException if Global.properties cannot be read
 	 */
-	public RequestSpecification loginRequestSpecification() throws IOException {
+	public static synchronized RequestSpecification loginRequestSpecification() throws IOException {
 		if (loginRequestSpecification == null) {
 			loginRequestSpecification = new RequestSpecBuilder()
 					.setBaseUri(getPropertiesValue("api.base.uri"))

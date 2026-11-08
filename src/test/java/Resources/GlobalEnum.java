@@ -10,7 +10,8 @@ public enum GlobalEnum {
 
 	ADD_PLACE("/maps/api/place/add/json"),
 	GET_PLACE("/maps/api/place/get/json"),
-	DELETE_PLACE("/maps/api/place/delete/json");
+	DELETE_PLACE("/maps/api/place/delete/json"),
+	LOGIN("/api/ecom/auth/login"),;
 
 	private final String resource;
 

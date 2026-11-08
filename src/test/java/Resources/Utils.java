@@ -68,4 +68,22 @@ public final class Utils {
 		}
 		return value;
 	}
+
+	/**
+	 * Read a required environment variable, such as a credential.
+	 * The value is never logged; only the variable's name appears in errors.
+	 *
+	 * @param name the environment variable name, e.g. "ECOM_USER_EMAIL"
+	 * @return the value of the environment variable
+	 * @throws IllegalStateException if the variable is not set or is blank
+	 */
+	public static String getEnvironmentValue(String name) {
+		String value = System.getenv(name);
+		if (value == null || value.trim().isEmpty()) {
+			logError("Environment variable " + name + " is not set");
+			throw new IllegalStateException("Environment variable " + name + " is not set. Set it in your OS "
+					                                + "user environment variables or the run configuration; see README → Setup.");
+		}
+		return value;
+	}
 }

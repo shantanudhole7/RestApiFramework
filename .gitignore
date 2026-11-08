@@ -10,3 +10,6 @@ requestLogs.txt
 
 # Allure command-line tool, downloaded by allure:serve
 .allure/
+
+# Local credentials, never committed; copy secrets.properties.example to create it
+src/test/java/Resources/secrets.properties

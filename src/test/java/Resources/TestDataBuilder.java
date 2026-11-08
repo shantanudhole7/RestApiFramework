@@ -8,7 +8,7 @@ import Pojo.Location;
 import Pojo.Login;
 
 /**
- * Builds request bodies for the Place API.
+ * Builds request bodies for the Place API and the e-commerce API.
  */
 public class TestDataBuilder {
 

@@ -20,6 +20,7 @@ public class TestContext {
 	private Response response;
 	private String placeId;
 	private final List<String> createdPlaceIds = new ArrayList<>();
+	private AuthSession authSession;
 
 	/**
 	 * @return the request being prepared for the next API call
@@ -78,5 +79,19 @@ public class TestContext {
 	 */
 	public List<String> getCreatedPlaceIds() {
 		return Collections.unmodifiableList(createdPlaceIds);
+	}
+
+	/**
+	 * @return the logged-in session, set by the "the user is logged in" step
+	 */
+	public AuthSession getAuthSession() {
+		return authSession;
+	}
+
+	/**
+	 * @param authSession the logged-in session for this scenario's requests
+	 */
+	public void setAuthSession(AuthSession authSession) {
+		this.authSession = authSession;
 	}
 }

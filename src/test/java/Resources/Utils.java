@@ -24,6 +24,12 @@ public final class Utils {
 	private static final Path PROPERTIES_FILE =
 			Paths.get(System.getProperty("user.dir"), "src", "test", "java", "Resources", "Global.properties");
 
+	/**
+	 * Location of secrets.properties, relative to the project root (the folder tests are run from).
+	 */
+	private static final Path SECRETS_FILE =
+			Paths.get(System.getProperty("user.dir"), "src", "test", "java", "Resources", "secrets.properties");
+
 	private Utils() {
 		// Static helpers only; never instantiated
 	}
@@ -38,18 +44,49 @@ public final class Utils {
 	 * @throws IOException if Global.properties cannot be found or read
 	 */
 	public static String getPropertiesValue(String globalKey) throws IOException {
-		Properties properties = new Properties();
-		try (InputStream inputStream = Files.newInputStream(PROPERTIES_FILE)) {
-			properties.load(inputStream);
-		} catch (IOException e) {
-			logError("Could not read " + PROPERTIES_FILE + " | " + e.getMessage());
-			throw e;
-		}
-		String value = properties.getProperty(globalKey);
+		String value = loadProperties(PROPERTIES_FILE).getProperty(globalKey);
 		if (value == null) {
 			logWarning("Key '" + globalKey + "' not found in " + PROPERTIES_FILE.getFileName());
 		}
 		return value;
+	}
+
+	/**
+	 * Read a required credential from secrets.properties. The file is git-ignored; create it by copying
+	 * secrets.properties.example. Values are never logged; only the key and file name appear in errors.
+	 *
+	 * @param key the key to look up, e.g. "ecom.user.email"
+	 * @return the value for the key, without surrounding whitespace
+	 * @throws IOException           if secrets.properties cannot be read
+	 * @throws IllegalStateException if secrets.properties is missing, or the key is missing or blank
+	 */
+	public static String getSecretValue(String key) throws IOException {
+		if (Files.notExists(SECRETS_FILE)) {
+			logError(SECRETS_FILE.getFileName() + " not found");
+			throw new IllegalStateException(SECRETS_FILE.getFileName() + " not found. Copy "
+					                                + "secrets.properties.example to secrets.properties and fill in the values; see README → Setup.");
+		}
+		String value = loadProperties(SECRETS_FILE).getProperty(key);
+		if (value == null || value.trim().isEmpty()) {
+			logError("Secret '" + key + "' is not set in " + SECRETS_FILE.getFileName());
+			throw new IllegalStateException("Secret '" + key + "' is not set in " + SECRETS_FILE.getFileName());
+		}
+		// Trailing spaces are easy to miss in a properties file and would make the login fail
+		return value.trim();
+	}
+
+	/**
+	 * Load a properties file, logging an error if it cannot be read.
+	 */
+	private static Properties loadProperties(Path file) throws IOException {
+		Properties properties = new Properties();
+		try (InputStream inputStream = Files.newInputStream(file)) {
+			properties.load(inputStream);
+		} catch (IOException e) {
+			logError("Could not read " + file + " | " + e.getMessage());
+			throw e;
+		}
+		return properties;
 	}
 
 	/**
@@ -65,24 +102,6 @@ public final class Utils {
 		                       .getString(key);
 		if (value == null) {
 			logWarning("JSON path '" + key + "' not found in response | Status: " + response.statusCode());
-		}
-		return value;
-	}
-
-	/**
-	 * Read a required environment variable, such as a credential.
-	 * The value is never logged; only the variable's name appears in errors.
-	 *
-	 * @param name the environment variable name, e.g. "ECOM_USER_EMAIL"
-	 * @return the value of the environment variable
-	 * @throws IllegalStateException if the variable is not set or is blank
-	 */
-	public static String getEnvironmentValue(String name) {
-		String value = System.getenv(name);
-		if (value == null || value.trim().isEmpty()) {
-			logError("Environment variable " + name + " is not set");
-			throw new IllegalStateException("Environment variable " + name + " is not set. Set it in your OS "
-					                                + "user environment variables or the run configuration; see README → Setup.");
 		}
 		return value;
 	}

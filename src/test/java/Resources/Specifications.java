@@ -96,7 +96,7 @@ public final class Specifications {
 	 * type only, with no logging and no Allure filter, so passwords and tokens never reach a log file or a report.
 	 * Built once per run and reused.
 	 *
-	 * @return the unlogged RequestSpecification
+	 * @return the login RequestSpecification (no logging, no report filters)
 	 * @throws IOException if Global.properties cannot be read
 	 */
 	public static synchronized RequestSpecification loginRequestSpecification() throws IOException {

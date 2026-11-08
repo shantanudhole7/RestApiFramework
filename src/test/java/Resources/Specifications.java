@@ -68,7 +68,7 @@ public final class Specifications {
 					.setBaseUri(baseUri)
 					.addQueryParam("key", getPropertiesValue("api.key"))
 					.setContentType(ContentType.JSON)
-					.addFilter(RequestLoggingFilter.logRequestTo(requestLogStream()))
+					.addFilter(maskedRequestLoggingFilter())
 					.addFilter(ResponseLoggingFilter.logResponseTo(requestLogStream()))
 					.addFilter(new AllureRestAssured())
 					.build();

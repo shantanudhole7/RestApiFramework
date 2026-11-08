@@ -82,7 +82,8 @@ public class StepDefinition {
 		                               .response();
 		testContext.setResponse(response);
 
-		// Register new places as soon as they exist, so cleanup deletes them even if a later step fails
+		// After an ADD_PLACE or CREATE_PRODUCT call, registers the new id in TestContext for the cleanup hook.
+		// Register created resources as soon as they exist, so cleanup deletes them even if a later step fails
 		if (endpoint == GlobalEnum.ADD_PLACE) {
 			String createdPlaceId = getJsonPath(response, "place_id");
 			if (createdPlaceId != null) {

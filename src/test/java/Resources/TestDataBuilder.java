@@ -43,6 +43,24 @@ public class TestDataBuilder {
 	/** Image uploaded with every test product: a small, clearly fake picture. */
 	private static final String PRODUCT_IMAGE = "src/test/resources/files/T-Shirt.png";
 
+	/** Name of the default product, created as setup for scenarios that only need a product to exist. */
+	private static final String DEFAULT_PRODUCT_NAME = "Test Product 3";
+
+	/** Category of the default product. */
+	private static final String DEFAULT_PRODUCT_CATEGORY = "fashion";
+
+	/** Sub-category of the default product. */
+	private static final String DEFAULT_PRODUCT_SUB_CATEGORY = "T-Shirt";
+
+	/** Description of the default product. */
+	private static final String DEFAULT_PRODUCT_DESCRIPTION = "Setup product for a delete test";
+
+	/** Price of the default product. */
+	private static final String DEFAULT_PRODUCT_PRICE = "499";
+
+	/** Who the default product is for. */
+	private static final String DEFAULT_PRODUCT_FOR = "Men";
+
 	/**
 	 * Build the request body for the Add Place API.
 	 * The location (lat/lng) and accuracy are fixed test values.
@@ -127,5 +145,17 @@ public class TestDataBuilder {
 		                    .setProductFor(productFor)
 		                    .setProductAddedBy(userId)
 		                    .setProductImage(PRODUCT_IMAGE);
+	}
+
+	/**
+	 * Build Create Product data with fixed fake values, for scenarios that need a product to exist
+	 * but don't test its details.
+	 *
+	 * @param userId id of the logged-in user, sent as productAddedBy
+	 * @return Product data with the default test values
+	 */
+	public Product defaultCreateProductPayload(String userId) {
+		return createProductPayload(DEFAULT_PRODUCT_NAME, DEFAULT_PRODUCT_CATEGORY, DEFAULT_PRODUCT_SUB_CATEGORY,
+		                            DEFAULT_PRODUCT_DESCRIPTION, DEFAULT_PRODUCT_PRICE, DEFAULT_PRODUCT_FOR, userId);
 	}
 }

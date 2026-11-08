@@ -1,7 +1,9 @@
 package StepDefinition;
 
+import Api.LoginApi;
 import Api.PlaceApi;
 import Api.ProductApi;
+import Context.AuthSession;
 import Context.TestContext;
 import Resources.TestDataBuilder;
 import io.cucumber.java.After;
@@ -12,6 +14,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static Assertion.Assertions.assertHttpOk;
+import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
 import static Resources.Utils.getJsonPath;
@@ -24,6 +27,9 @@ public class Hooks {
 
 	/** Delete status when the place or product was deleted. */
 	private static final int HTTP_OK = 200;
+
+	/** Create Product status when the product was created. */
+	private static final int HTTP_CREATED = 201;
 
 	/** Delete status when the place or product no longer exists. */
 	private static final int HTTP_NOT_FOUND = 404;
@@ -60,6 +66,29 @@ public class Hooks {
 		}
 		assertHttpOk(response);
 		testContext.setPlaceId(placeId);
+	}
+
+	/**
+	 * Create a product before each Delete Product scenario and keep its productId, so every Delete scenario
+	 * deletes a product of its own. Hooks run before the Background, so the hook gets the session itself.
+	 *
+	 * @throws IOException if Global.properties cannot be read
+	 */
+	@Before("@DeleteProduct")
+	public void createProductForDelete() throws IOException {
+		logInformation("Hook: create a product for the Delete Product scenario");
+		AuthSession session = new LoginApi().session();
+		TestDataBuilder testDataBuilder = new TestDataBuilder();
+
+		Response response = new ProductApi().createProduct(testDataBuilder.defaultCreateProductPayload(
+				session.getUserId()), session);
+		String productId = getJsonPath(response, "productId");
+		if (productId != null) {
+			// Track before the status check, so the product is cleaned up even if the check fails
+			testContext.addCreatedProductId(productId);
+		}
+		assertHttpStatus(response, HTTP_CREATED);
+		testContext.setProductId(productId);
 	}
 
 	/**
@@ -107,7 +136,7 @@ public class Hooks {
 		ProductApi productApi = new ProductApi();
 		for (String productId : productIds) {
 			try {
-				Response response = productApi.deleteProduct(productId, testContext.getAuthSession());
+				Response response = productApi.deleteProduct(productId, new LoginApi().session());
 				int statusCode = response.statusCode();
 				if (statusCode == HTTP_OK) {
 					logInformation("Cleanup: deleted product " + productId);

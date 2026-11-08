@@ -1,7 +1,11 @@
 package StepDefinition;
 
 import Api.LoginApi;
+import Api.ProductApi;
+import Context.AuthSession;
 import Context.TestContext;
+import Pojo.Product;
+import Resources.TestDataBuilder;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 
@@ -32,9 +36,15 @@ public class ProductStepDefinition {
 	}
 
 	@Given("Create Product payload with {string} {string} {string} {string} {string} {string}")
-	public void createProductPayloadWith(String name, String category, String subCategory, String productDescription,
-	                                     String price, String productFor) {
-		throw new io.cucumber.java.PendingException();
+	public void createProductPayloadWith(String name, String category, String subCategory, String description,
+	                                     String price, String productFor) throws IOException {
+		TestDataBuilder testDataBuilder = new TestDataBuilder();
+		AuthSession session = testContext.getAuthSession();
+		logInformation("Build Create Product request for '" + name + "'");
+		Product product = testDataBuilder.createProductPayload(name, category, subCategory, description, price,
+		                                                       productFor, session.getUserId());
+		testContext.setRequestSpecification(new ProductApi().createProductRequest(product, session));
+
 	}
 
 	@Then("the product created can be fetched using {string}")

@@ -21,6 +21,7 @@ public class TestContext {
 	private String placeId;
 	private final List<String> createdPlaceIds = new ArrayList<>();
 	private AuthSession authSession;
+	private final List<String> createdProductIds = new ArrayList<>();
 
 	/**
 	 * @return the request being prepared for the next API call
@@ -93,5 +94,22 @@ public class TestContext {
 	 */
 	public void setAuthSession(AuthSession authSession) {
 		this.authSession = authSession;
+	}
+
+	/**
+	 * Remember a product created in this scenario, so the cleanup hook deletes it after the scenario.
+	 *
+	 * @param productId productId returned by the Create Product API
+	 */
+	public void addCreatedProductId(String productId) {
+		logInformation("Track product " + productId + " for cleanup");
+		createdProductIds.add(productId);
+	}
+
+	/**
+	 * @return productIds created in this scenario, in creation order (read-only)
+	 */
+	public List<String> getCreatedProductIds() {
+		return Collections.unmodifiableList(createdProductIds);
 	}
 }

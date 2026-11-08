@@ -89,6 +89,12 @@ public class StepDefinition {
 				testContext.addCreatedPlaceId(createdPlaceId);
 			}
 		}
+		else if (endpoint == GlobalEnum.CREATE_PRODUCT) {
+			String createdProductId = getJsonPath(response, "productId");
+			if (createdProductId != null) {
+				testContext.addCreatedProductId(createdProductId);
+			}
+		}
 	}
 
 	@Then("the API call succeeds with status code {int}")

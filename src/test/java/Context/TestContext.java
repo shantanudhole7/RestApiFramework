@@ -22,6 +22,7 @@ public class TestContext {
 	private final List<String> createdPlaceIds = new ArrayList<>();
 	private AuthSession authSession;
 	private final List<String> createdProductIds = new ArrayList<>();
+	private String productId;
 
 	/**
 	 * @return the request being prepared for the next API call
@@ -111,5 +112,19 @@ public class TestContext {
 	 */
 	public List<String> getCreatedProductIds() {
 		return Collections.unmodifiableList(createdProductIds);
+	}
+
+	/**
+	 * @return productId of the product this scenario works with, or null if none was created
+	 */
+	public String getProductId() {
+		return productId;
+	}
+
+	/**
+	 * @param productId productId returned by the Create Product API
+	 */
+	public void setProductId(String productId) {
+		this.productId = productId;
 	}
 }

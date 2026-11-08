@@ -25,7 +25,8 @@ import static Resources.Utils.getJsonPath;
 import static io.restassured.RestAssured.given;
 
 /**
- * Step definitions for the Place API feature.
+ * Step definitions for the Place API feature, plus the generic steps (http request, status code, response body)
+ * shared by every feature.
  */
 public class StepDefinition {
 
@@ -53,7 +54,7 @@ public class StepDefinition {
 	/**
 	 * Send the prepared request to the given endpoint and check the response against the shared JSON response spec.
 	 * Also called by other steps, e.g. to fetch a created place with GET.
-	 * After an ADD_PLACE call, registers the new place_id in TestContext for the cleanup hook.
+	 * After an ADD_PLACE or CREATE_PRODUCT call, registers the new id in TestContext for the cleanup hook.
 	 *
 	 * @param apiEndPoint endpoint name from GlobalEnum, e.g. "ADD_PLACE"
 	 * @param method      HTTP method name, case-insensitive, e.g. "POST", "GET", "DELETE"
@@ -82,7 +83,6 @@ public class StepDefinition {
 		                               .response();
 		testContext.setResponse(response);
 
-		// After an ADD_PLACE or CREATE_PRODUCT call, registers the new id in TestContext for the cleanup hook.
 		// Register created resources as soon as they exist, so cleanup deletes them even if a later step fails
 		if (endpoint == GlobalEnum.ADD_PLACE) {
 			String createdPlaceId = getJsonPath(response, "place_id");

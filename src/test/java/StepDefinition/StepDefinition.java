@@ -3,7 +3,6 @@ package StepDefinition;
 import Context.TestContext;
 import Resources.GlobalEnum;
 import Resources.TestDataBuilder;
-import Resources.Utils;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -20,12 +19,15 @@ import static Assertion.Assertions.assertHttpOk;
 import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logError;
 import static Logger.Log.logInformation;
+import static Resources.Specifications.defaultRequestSpecification;
+import static Resources.Specifications.defaultResponseSpecification;
+import static Resources.Utils.getJsonPath;
 import static io.restassured.RestAssured.given;
 
 /**
  * Step definitions for the Place API feature.
  */
-public class StepDefinition extends Utils {
+public class StepDefinition {
 
 	private final TestContext testContext;
 

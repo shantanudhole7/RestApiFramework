@@ -13,6 +13,7 @@ import java.util.List;
 import static Assertion.Assertions.assertHttpOk;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
+import static Resources.Utils.getJsonPath;
 
 /**
  * Cucumber hooks: setup and cleanup that run around scenarios. Setup hooks are selected by tag;
@@ -20,10 +21,14 @@ import static Logger.Log.logWarning;
  */
 public class Hooks {
 
-	/** Delete Place status when the place was deleted. */
+	/**
+	 * Delete Place status when the place was deleted.
+	 */
 	private static final int HTTP_OK = 200;
 
-	/** Delete Place status when the place no longer exists. */
+	/**
+	 * Delete Place status when the place no longer exists.
+	 */
 	private static final int HTTP_NOT_FOUND = 404;
 
 	private final TestContext testContext;
@@ -51,7 +56,7 @@ public class Hooks {
 		TestDataBuilder testDataBuilder = new TestDataBuilder();
 
 		Response response = placeApi.addPlace(testDataBuilder.defaultAddPlacePayload());
-		String placeId = placeApi.getJsonPath(response, "place_id");
+		String placeId = getJsonPath(response, "place_id");
 		if (placeId != null) {
 			// Track before the status check, so the place is cleaned up even if the check fails
 			testContext.addCreatedPlaceId(placeId);

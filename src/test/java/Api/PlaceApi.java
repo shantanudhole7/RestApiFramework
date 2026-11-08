@@ -3,19 +3,20 @@ package Api;
 import Pojo.AddPlace;
 import Resources.GlobalEnum;
 import Resources.TestDataBuilder;
-import Resources.Utils;
 import io.restassured.response.Response;
 
 import java.io.IOException;
 
 import static Logger.Log.logInformation;
+import static Resources.Specifications.defaultRequestSpecification;
+import static Resources.Specifications.defaultResponseSpecification;
 import static io.restassured.RestAssured.given;
 
 /**
  * Calls the Place API endpoints. Each method sends one request built from the shared request spec,
  * checks it against the shared response spec, and returns the response; callers store state and assert.
  */
-public class PlaceApi extends Utils {
+public class PlaceApi {
 
 	/**
 	 * Add a place through the Add Place API.

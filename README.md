@@ -146,7 +146,7 @@ DELETE_PLACE("/maps/api/place/delete/json");
 
 ### Request specification
 
-Every request starts from one shared specification, built once per run by `Specifications.defaultResponseSpecification()`:
+Every request starts from one shared specification, built once per run by `Specifications.defaultRequestSpecification`:
 
 - base URI and API key from `Global.properties`
 - JSON content type
@@ -157,7 +157,7 @@ Every request starts from one shared specification, built once per run by `Speci
 given().spec(defaultRequestSpecification()).body(payload)
 ```
 
-Every response is checked against the shared `Specifications.defaultRequestSpecification()`, which expects JSON content.
+Every response is checked against the shared `Specifications.defaultResponseSpecification()`, which expects JSON content.
 Status codes are verified in the steps, so each scenario can expect its own code and the check is logged:
 
 ```java

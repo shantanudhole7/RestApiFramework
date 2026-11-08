@@ -11,13 +11,12 @@ import static Logger.Log.logError;
 import static Logger.Log.logInformation;
 import static Resources.Specifications.loginRequestSpecification;
 import static Resources.Utils.getJsonPath;
-import static Resources.Utils.getPropertiesValue;
 import static Resources.Utils.getSecretValue;
 import static io.restassured.RestAssured.given;
 
 /**
  * Logs in to the e-commerce API once per run and shares the session (token and user id) with every scenario.
- * Credentials come from the ECOM_USER_EMAIL and ECOM_USER_PASSWORD environment variables.
+ * Credentials come from secrets.properties (git-ignored), read with Utils.getSecretValue.
  */
 public class LoginApi {
 
@@ -60,8 +59,8 @@ public class LoginApi {
 	}
 
 	/**
-	 * Log in with the credentials from the environment. The request uses the unlogged spec, so the
-	 * password and token never reach requestLogs.txt or the Allure report.
+	 * Log in with the credentials from secrets.properties. The request uses the login spec, which has no logging,
+	 * so the password and token never reach requestLogs.txt or the Allure report.
 	 */
 	private AuthSession login() throws IOException {
 		TestDataBuilder testDataBuilder = new TestDataBuilder();

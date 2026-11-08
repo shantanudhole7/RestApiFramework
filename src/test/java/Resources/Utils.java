@@ -13,7 +13,8 @@ import static Logger.Log.logError;
 import static Logger.Log.logWarning;
 
 /**
- * Shared static helpers: reading settings from Global.properties and reading values from JSON responses.
+ * Shared static helpers: Shared static helpers: reading settings from Global.properties, credentials from
+ * secrets.properties, and values from JSON responses.
  * Request and response specifications live in Specifications.
  */
 public final class Utils {
@@ -25,7 +26,7 @@ public final class Utils {
 			Paths.get(System.getProperty("user.dir"), "src", "test", "java", "Resources", "Global.properties");
 
 	/**
-	 * Location of secrets.properties, relative to the project root (the folder tests are run from).
+	 * Location of secrets.properties: local credentials, git-ignored and never committed.
 	 */
 	private static final Path SECRETS_FILE =
 			Paths.get(System.getProperty("user.dir"), "src", "test", "java", "Resources", "secrets.properties");

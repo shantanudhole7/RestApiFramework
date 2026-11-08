@@ -24,7 +24,8 @@ src/
 │   │   ├── Global.properties     # Settings: base URI, API key
 │   │   ├── GlobalEnum            # API endpoint paths
 │   │   ├── TestDataBuilder       # Builds request payloads
-│   │   └── Utils                 # Request/response specs, properties reader, JSON helper
+│   │   ├── Specifications        # Shared request/response specs (static, cached)
+│   │   └── Utils                 # Settings and JSON reading (static helpers)
 │   ├── Features/                 # Cucumber feature files, one per API area (PlaceApi.feature)
 │   ├── StepDefinition/           # Step definitions (StepDefinition) and hooks (Hooks)
 │   └── cucumber/Options/
@@ -99,6 +100,8 @@ src/
 ## 6. Requests and responses
 
 - Every request starts from the shared spec: `given().spec(defaultRequestSpecification())`.
+- Specs come from `Resources.Specifications` through static imports
+  (`import static Resources.Specifications.defaultRequestSpecification;`).
 - The request spec is built once per run with the base URI, API key, JSON content type, and request/response
   logging to `requestLogs.txt` and the `AllureRestAssured` filter. Don't build a second spec or add these settings again per request.
 - Every response is checked against the shared response spec with
@@ -161,6 +164,9 @@ src/
 - One builder call per line for long chains (`RequestSpecBuilder`, fluent setters).
 - No blank line directly after an opening `{`.
 - Braces on every `if` / `else`, even for a single line.
+- Helper classes (`Utils`, `Specifications`) are `final` with a `private` constructor and static methods, used
+  through static imports. Never extend a helper class to reach its methods: a class extends another only when it
+  *is* a kind of it.
 
 ## 12. Dependencies
 

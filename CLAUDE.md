@@ -43,8 +43,8 @@ and pull request.
   `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404)
 - `src/test/java/Context/TestContext` per-scenario state, injected by cucumber-picocontainer
 - `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
-- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints),
-  `TestDataBuilder` (payloads), `Utils` (request/response specs, properties reader, JSON helper)
+- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints), `TestDataBuilder`
+  (payloads), `Specifications` (shared request/response specs), `Utils` (settings and JSON reading)
 - `src/test/java/Features/` Cucumber feature files (`PlaceApi.feature`)
 - `src/test/java/StepDefinition/StepDefinition` step definitions for the feature files
 - `src/test/java/StepDefinition/Hooks` tag-scoped setup (`@Before("@DeletePlace")` creates the place to delete) and
@@ -127,3 +127,5 @@ Add one line per decision so future sessions keep it.
   `@After` hook deletes them after every scenario. Cleanup never fails a scenario (200/404 info, anything else warns).
 - 2026-11-07: Reporting uses Allure (2.x line, via `allure-bom`) with the `AllureRestAssured` filter on the shared
   request spec, plus Cucumber's single-file HTML report; the masterthought plugin and the JSON output are removed.
+- 2026-11-08: Request/response specs moved from `Utils` to `Specifications`; both are final utility classes used
+  through static imports, and no class extends them (supersedes "in `Utils`" in the 2026-11-03 decision).

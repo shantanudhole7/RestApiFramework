@@ -43,8 +43,9 @@ RestApiFramework/
 │       │   ├── Resources/
 │       │   │   ├── Global.properties         # Settings: base URI, API key
 │       │   │   ├── GlobalEnum.java           # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
+│       │   │   ├── Specifications.java       # Shared request/response specs, built once per run
 │       │   │   ├── TestDataBuilder.java      # Builds Add Place (custom or default) and Delete Place payloads
-│       │   │   └── Utils.java                # Request/response specs, properties reader, JSON path helper
+│       │   │   └── Utils.java                # Properties reader and JSON path helper
 │       │   ├── Features/
 │       │   │   └── PlaceApi.feature          # Place API scenarios
 │       │   ├── StepDefinition/
@@ -145,7 +146,7 @@ DELETE_PLACE("/maps/api/place/delete/json");
 
 ### Request specification
 
-Every request starts from one shared specification, built once per run by `Utils.defaultRequestSpecification()`:
+Every request starts from one shared specification, built once per run by `Specifications.defaultResponseSpecification()`:
 
 - base URI and API key from `Global.properties`
 - JSON content type
@@ -156,7 +157,7 @@ Every request starts from one shared specification, built once per run by `Utils
 given().spec(defaultRequestSpecification()).body(payload)
 ```
 
-Every response is checked against the shared `Utils.defaultResponseSpecification()`, which expects JSON content.
+Every response is checked against the shared `Specifications.defaultRequestSpecification()`, which expects JSON content.
 Status codes are verified in the steps, so each scenario can expect its own code and the check is logged:
 
 ```java

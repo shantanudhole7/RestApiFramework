@@ -88,8 +88,7 @@ public class StepDefinition {
 			if (createdPlaceId != null) {
 				testContext.addCreatedPlaceId(createdPlaceId);
 			}
-		}
-		else if (endpoint == GlobalEnum.CREATE_PRODUCT) {
+		} else if (endpoint == GlobalEnum.CREATE_PRODUCT) {
 			String createdProductId = getJsonPath(response, "productId");
 			if (createdProductId != null) {
 				testContext.addCreatedProductId(createdProductId);

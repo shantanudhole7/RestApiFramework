@@ -5,6 +5,7 @@ import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.config.LogConfig;
 import io.restassured.config.RestAssuredConfig;
+import io.restassured.filter.log.LogDetail;
 import io.restassured.filter.log.RequestLoggingFilter;
 import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.http.ContentType;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
 
 import static Logger.Log.logInformation;
 import static Resources.Utils.getPropertiesValue;
@@ -125,7 +127,7 @@ public final class Specifications {
 					.setConfig(RestAssuredConfig.config()
 					                            .logConfig(LogConfig.logConfig()
 					                                                .blacklistHeader(AUTHORIZATION_HEADER)))
-					.addFilter(RequestLoggingFilter.logRequestTo(requestLogStream()))
+					.addFilter(maskedRequestLoggingFilter())
 					.addFilter(ResponseLoggingFilter.logResponseTo(requestLogStream()))
 					.addFilter(new AllureRestAssured())
 					.build();
@@ -133,14 +135,21 @@ public final class Specifications {
 		return ecomRequestSpecification;
 	}
 
-	/**
-	 * Open requestLogs.txt once per run, so every logged spec writes to the same file.
-	 */
+	/** Open requestLogs.txt once per run, so every logged spec writes to the same file. */
 	private static synchronized PrintStream requestLogStream() throws IOException {
 		if (requestLogStream == null) {
 			// Kept open for the whole run; closed automatically when the JVM exits.
 			requestLogStream = new PrintStream(Files.newOutputStream(Paths.get(REQUEST_LOG_FILE)));
 		}
 		return requestLogStream;
+	}
+
+	/**
+	 * Request-logging filter for requestLogs.txt that masks the Authorization header. The filter keeps its own
+	 * blacklist and does not read the spec's LogConfig (which only AllureRestAssured uses), so it is set here too.
+	 */
+	private static RequestLoggingFilter maskedRequestLoggingFilter() throws IOException {
+		return new RequestLoggingFilter(LogDetail.ALL, true, requestLogStream(), true,
+		                                Collections.singleton(AUTHORIZATION_HEADER));
 	}
 }

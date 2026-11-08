@@ -44,7 +44,6 @@ public class ProductStepDefinition {
 		Product product = testDataBuilder.createProductPayload(name, category, subCategory, description, price,
 		                                                       productFor, session.getUserId());
 		testContext.setRequestSpecification(new ProductApi().createProductRequest(product, session));
-
 	}
 
 	@Then("the product created can be fetched using {string}")

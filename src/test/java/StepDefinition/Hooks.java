@@ -22,14 +22,10 @@ import static Resources.Utils.getJsonPath;
  */
 public class Hooks {
 
-	/**
-	 * Delete Place status when the place was deleted.
-	 */
+	/** Delete status when the place or product was deleted. */
 	private static final int HTTP_OK = 200;
 
-	/**
-	 * Delete Place status when the place no longer exists.
-	 */
+	/** Delete status when the place or product no longer exists. */
 	private static final int HTTP_NOT_FOUND = 404;
 
 	private final TestContext testContext;

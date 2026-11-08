@@ -3,6 +3,8 @@ package Resources;
 import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
+import io.restassured.config.LogConfig;
+import io.restassured.config.RestAssuredConfig;
 import io.restassured.filter.log.RequestLoggingFilter;
 import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.http.ContentType;
@@ -23,25 +25,26 @@ import static Resources.Utils.getPropertiesValue;
  */
 public final class Specifications {
 
-	/**
-	 * File that every logged request and response is written to.
-	 */
+	/** File that every logged request and response is written to. */
 	private static final String REQUEST_LOG_FILE = "requestLogs.txt";
 
-	/**
-	 * Request specification shared by every logged API call.
-	 */
+	/** Request specification shared by every logged API call. */
 	private static RequestSpecification defaultRequestSpecification;
 
-	/**
-	 * Response specification shared by every API call.
-	 */
+	/** Response specification shared by every API call. */
 	private static ResponseSpecification defaultResponseSpecification;
 
-	/**
-	 * Request specification without logging or report filters, for requests that carry credentials.
-	 */
+	/** Request specification without logging or report filters, for requests that carry credentials. */
 	private static RequestSpecification loginRequestSpecification;
+
+	/** Header whose value is masked as [ BLACKLISTED ] in requestLogs.txt and the Allure report. */
+	private static final String AUTHORIZATION_HEADER = "Authorization";
+
+	/** Stream to requestLogs.txt, shared by every logged spec so they all write to one file. */
+	private static PrintStream requestLogStream;
+
+	/** E-commerce API request specification; built on first use, then reused. */
+	private static RequestSpecification ecomRequestSpecification;
 
 
 	private Specifications() {
@@ -61,13 +64,12 @@ public final class Specifications {
 		if (defaultRequestSpecification == null) {
 			String baseUri = getPropertiesValue("api.base.uri");
 			// Kept open for the whole run; closed automatically when the JVM exits.
-			PrintStream requestLogs = new PrintStream(Files.newOutputStream(Paths.get(REQUEST_LOG_FILE)));
 			defaultRequestSpecification = new RequestSpecBuilder()
 					.setBaseUri(baseUri)
 					.addQueryParam("key", getPropertiesValue("api.key"))
 					.setContentType(ContentType.JSON)
-					.addFilter(RequestLoggingFilter.logRequestTo(requestLogs))
-					.addFilter(ResponseLoggingFilter.logResponseTo(requestLogs))
+					.addFilter(RequestLoggingFilter.logRequestTo(requestLogStream()))
+					.addFilter(ResponseLoggingFilter.logResponseTo(requestLogStream()))
 					.addFilter(new AllureRestAssured())
 					.build();
 			logInformation("Request specification created | Base URI: " + baseUri
@@ -107,5 +109,40 @@ public final class Specifications {
 					.build();
 		}
 		return loginRequestSpecification;
+	}
+
+	/**
+	 * Build the e-commerce API request specification: base URI, request/response logging to requestLogs.txt and
+	 * the Allure report, with the Authorization header masked in both. No content type, because product requests
+	 * are multipart; the caller adds the Authorization header from the logged-in session.
+	 * Built once per run and reused.
+	 *
+	 * @return the e-commerce RequestSpecification
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public static synchronized RequestSpecification ecomRequestSpecification() throws IOException {
+		if (ecomRequestSpecification == null) {
+			ecomRequestSpecification = new RequestSpecBuilder()
+					.setBaseUri(getPropertiesValue("api.base.uri"))
+					.setConfig(RestAssuredConfig.config()
+					                            .logConfig(LogConfig.logConfig()
+					                                                .blacklistHeader(AUTHORIZATION_HEADER)))
+					.addFilter(RequestLoggingFilter.logRequestTo(requestLogStream()))
+					.addFilter(ResponseLoggingFilter.logResponseTo(requestLogStream()))
+					.addFilter(new AllureRestAssured())
+					.build();
+		}
+		return ecomRequestSpecification;
+	}
+
+	/**
+	 * Open requestLogs.txt once per run, so every logged spec writes to the same file.
+	 */
+	private static synchronized PrintStream requestLogStream() throws IOException {
+		if (requestLogStream == null) {
+			// Kept open for the whole run; closed automatically when the JVM exits.
+			requestLogStream = new PrintStream(Files.newOutputStream(Paths.get(REQUEST_LOG_FILE)));
+		}
+		return requestLogStream;
 	}
 }

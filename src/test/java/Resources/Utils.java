@@ -13,7 +13,7 @@ import static Logger.Log.logError;
 import static Logger.Log.logWarning;
 
 /**
- * Shared static helpers: Shared static helpers: reading settings from Global.properties, credentials from
+ * Shared static helpers: reading settings from Global.properties, credentials from
  * secrets.properties, and values from JSON responses.
  * Request and response specifications live in Specifications.
  */

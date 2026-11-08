@@ -6,56 +6,42 @@ import java.util.List;
 import Pojo.AddPlace;
 import Pojo.Location;
 import Pojo.Login;
+import Pojo.Product;
 
 /**
  * Builds request bodies for the Place API and the e-commerce API.
  */
 public class TestDataBuilder {
 
-	/**
-	 * Fixed test latitude sent with every new place.
-	 */
+	/** Fixed test latitude sent with every new place. */
 	private static final double LATITUDE = -38.383494;
 
-	/**
-	 * Fixed test longitude sent with every new place.
-	 */
+	/** Fixed test longitude sent with every new place. */
 	private static final double LONGITUDE = 33.427362;
 
-	/**
-	 * Fixed location accuracy, in metres, sent with every new place.
-	 */
+	/** Fixed location accuracy, in metres, sent with every new place. */
 	private static final int ACCURACY = 50;
 
-	/**
-	 * Name of the default place, created as setup for scenarios that only need a place to exist.
-	 */
+	/** Name of the default place, created as setup for scenarios that only need a place to exist. */
 	private static final String DEFAULT_NAME = "Test Place 3";
 
-	/**
-	 * Address of the default place.
-	 */
+	/** Address of the default place. */
 	private static final String DEFAULT_ADDRESS = "789 Test Road";
 
-	/**
-	 * Phone number of the default place.
-	 */
+	/** Phone number of the default place. */
 	private static final String DEFAULT_PHONE_NUMBER = "9999999999";
 
-	/**
-	 * Language of the default place.
-	 */
+	/** Language of the default place. */
 	private static final String DEFAULT_LANGUAGE = "English";
 
-	/**
-	 * Website of the default place.
-	 */
+	/** Website of the default place. */
 	private static final String DEFAULT_WEBSITE = "https://example.com/place3";
 
-	/**
-	 * Type of the default place.
-	 */
+	/** Type of the default place. */
 	private static final String DEFAULT_TYPES = "Engineer";
+
+	/** Image uploaded with every test product: a small, clearly fake picture. */
+	private static final String PRODUCT_IMAGE = "src/test/resources/files/T-Shirt.png";
 
 	/**
 	 * Build the request body for the Add Place API.
@@ -117,5 +103,29 @@ public class TestDataBuilder {
 	public Login loginPayload(String userEmail, String userPassword) {
 		return new Login().setUserEmail(userEmail)
 		                  .setUserPassword(userPassword);
+	}
+
+	/**
+	 * Build the data for the e-commerce Create Product API. The image is a fixed test file.
+	 *
+	 * @param name        product name, e.g. "Test Product 1"
+	 * @param category    category, e.g. "fashion"
+	 * @param subCategory sub-category, e.g. "T-Shirt"
+	 * @param description description
+	 * @param price       price, as text, e.g. "999"
+	 * @param productFor  who the product is for, e.g. "Men"
+	 * @param userId      id of the logged-in user, sent as productAddedBy
+	 * @return Product data, sent as multipart form fields by ProductApi
+	 */
+	public Product createProductPayload(String name, String category, String subCategory, String description,
+	                                    String price, String productFor, String userId) {
+		return new Product().setProductName(name)
+		                    .setProductCategory(category)
+		                    .setProductSubCategory(subCategory)
+		                    .setProductDescription(description)
+		                    .setProductPrice(price)
+		                    .setProductFor(productFor)
+		                    .setProductAddedBy(userId)
+		                    .setProductImage(PRODUCT_IMAGE);
 	}
 }

@@ -25,6 +25,9 @@ import static Resources.Utils.getPropertiesValue;
  */
 public final class Specifications {
 
+	/** Header whose value is masked as [ BLACKLISTED ] in requestLogs.txt and the Allure report. */
+	public static final String AUTHORIZATION_HEADER = "Authorization";
+
 	/** File that every logged request and response is written to. */
 	private static final String REQUEST_LOG_FILE = "requestLogs.txt";
 
@@ -37,15 +40,11 @@ public final class Specifications {
 	/** Request specification without logging or report filters, for requests that carry credentials. */
 	private static RequestSpecification loginRequestSpecification;
 
-	/** Header whose value is masked as [ BLACKLISTED ] in requestLogs.txt and the Allure report. */
-	private static final String AUTHORIZATION_HEADER = "Authorization";
-
 	/** Stream to requestLogs.txt, shared by every logged spec so they all write to one file. */
 	private static PrintStream requestLogStream;
 
 	/** E-commerce API request specification; built on first use, then reused. */
 	private static RequestSpecification ecomRequestSpecification;
-
 
 	private Specifications() {
 		// Static helpers only; never instantiated
@@ -63,7 +62,6 @@ public final class Specifications {
 	public static synchronized RequestSpecification defaultRequestSpecification() throws IOException {
 		if (defaultRequestSpecification == null) {
 			String baseUri = getPropertiesValue("api.base.uri");
-			// Kept open for the whole run; closed automatically when the JVM exits.
 			defaultRequestSpecification = new RequestSpecBuilder()
 					.setBaseUri(baseUri)
 					.addQueryParam("key", getPropertiesValue("api.key"))

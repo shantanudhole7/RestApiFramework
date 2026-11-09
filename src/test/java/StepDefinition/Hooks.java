@@ -1,8 +1,8 @@
 package StepDefinition;
 
 import Api.PlaceApi;
+import ApiDataBuilder.PlaceApiDataBuilder;
 import Context.TestContext;
-import Resources.TestDataBuilder;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.restassured.response.Response;
@@ -13,6 +13,7 @@ import java.util.List;
 import static Assertion.Assertions.assertHttpOk;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
+import static Utilities.ResponseUtils.getJsonPath;
 
 /**
  * Cucumber hooks: setup and cleanup that run around scenarios. Setup hooks are selected by tag;
@@ -48,10 +49,10 @@ public class Hooks {
 	public void createPlaceForDelete() throws IOException {
 		logInformation("Hook: create a place for the Delete Place scenario");
 		PlaceApi placeApi = new PlaceApi();
-		TestDataBuilder testDataBuilder = new TestDataBuilder();
+		PlaceApiDataBuilder placeApiDataBuilder = new PlaceApiDataBuilder();
 
-		Response response = placeApi.addPlace(testDataBuilder.defaultAddPlacePayload());
-		String placeId = placeApi.getJsonPath(response, "place_id");
+		Response response = placeApi.addPlace(placeApiDataBuilder.defaultAddPlacePayload());
+		String placeId = getJsonPath(response, "place_id");
 		if (placeId != null) {
 			// Track before the status check, so the place is cleaned up even if the check fails
 			testContext.addCreatedPlaceId(placeId);

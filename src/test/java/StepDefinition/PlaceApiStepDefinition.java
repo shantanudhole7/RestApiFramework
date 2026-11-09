@@ -1,9 +1,8 @@
 package StepDefinition;
 
+import ApiDataBuilder.PlaceApiDataBuilder;
 import Context.TestContext;
 import Resources.GlobalEnum;
-import Resources.TestDataBuilder;
-import Resources.Utils;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -20,12 +19,15 @@ import static Assertion.Assertions.assertHttpOk;
 import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logError;
 import static Logger.Log.logInformation;
+import static Specification.Specifications.defaultRequestSpecification;
+import static Specification.Specifications.defaultResponseSpecification;
+import static Utilities.ResponseUtils.getJsonPath;
 import static io.restassured.RestAssured.given;
 
 /**
  * Step definitions for the Place API feature.
  */
-public class StepDefinition extends Utils {
+public class PlaceApiStepDefinition {
 
 	private final TestContext testContext;
 
@@ -34,18 +36,19 @@ public class StepDefinition extends Utils {
 	 *
 	 * @param testContext state shared by the steps and hooks of the current scenario
 	 */
-	public StepDefinition(TestContext testContext) {
+	public PlaceApiStepDefinition(TestContext testContext) {
 		this.testContext = testContext;
 	}
 
 	@Given("Add Place payload with {string} {string} {string} {string} {string} {string}")
 	public void addPlacePayloadWith(String name, String address, String phoneNumber, String language, String website,
 	                                String types) throws IOException {
-		TestDataBuilder testDataBuilder = new TestDataBuilder();
+		PlaceApiDataBuilder placeApiDataBuilder = new PlaceApiDataBuilder();
 		logInformation("Build Add Place payload for '" + name + "'");
 		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
-		                                           .body(testDataBuilder.addPlacePayload(name, address, phoneNumber,
-		                                                                                 language, website, types)));
+		                                           .body(placeApiDataBuilder.addPlacePayload(name, address, phoneNumber,
+		                                                                                     language, website,
+		                                                                                     types)));
 	}
 
 	/**
@@ -124,10 +127,11 @@ public class StepDefinition extends Utils {
 	 */
 	@Given("Delete Place payload for the created place")
 	public void deletePlacePayloadForTheCreatedPlace() throws IOException {
-		TestDataBuilder testDataBuilder = new TestDataBuilder();
+		PlaceApiDataBuilder placeApiDataBuilder = new PlaceApiDataBuilder();
 		logInformation("Build Delete Place payload for place " + testContext.getPlaceId());
+		String deletePlacePayload = placeApiDataBuilder.deletePlacePayload(testContext.getPlaceId());
 		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
-		                                           .body(testDataBuilder.deletePlacePayload(testContext.getPlaceId())));
+		                                           .body(deletePlacePayload));
 	}
 
 	@Then("{string} in response body is {string}")

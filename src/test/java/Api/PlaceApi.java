@@ -1,26 +1,27 @@
 package Api;
 
+import ApiDataBuilder.PlaceApiDataBuilder;
 import Pojo.AddPlace;
 import Resources.GlobalEnum;
-import Resources.TestDataBuilder;
-import Resources.Utils;
 import io.restassured.response.Response;
 
 import java.io.IOException;
 
 import static Logger.Log.logInformation;
+import static Specification.Specifications.defaultRequestSpecification;
+import static Specification.Specifications.defaultResponseSpecification;
 import static io.restassured.RestAssured.given;
 
 /**
  * Calls the Place API endpoints. Each method sends one request built from the shared request spec,
  * checks it against the shared response spec, and returns the response; callers store state and assert.
  */
-public class PlaceApi extends Utils {
+public class PlaceApi {
 
 	/**
 	 * Add a place through the Add Place API.
 	 *
-	 * @param payload place to add, built by TestDataBuilder
+	 * @param payload place to add, built by PlaceApiDataBuilder
 	 * @return response of the Add Place call; place_id is in its body
 	 * @throws IOException if Global.properties cannot be read
 	 */
@@ -44,10 +45,10 @@ public class PlaceApi extends Utils {
 	 * @throws IOException if Global.properties cannot be read
 	 */
 	public Response deletePlace(String placeId) throws IOException {
-		TestDataBuilder testDataBuilder = new TestDataBuilder();
+		PlaceApiDataBuilder placeApiDataBuilder = new PlaceApiDataBuilder();
 		logInformation("Delete place " + placeId + " with " + GlobalEnum.DELETE_PLACE);
 		return given().spec(defaultRequestSpecification())
-		              .body(testDataBuilder.deletePlacePayload(placeId))
+		              .body(placeApiDataBuilder.deletePlacePayload(placeId))
 		              .when()
 		              .post(GlobalEnum.DELETE_PLACE.getResource())
 		              .then()

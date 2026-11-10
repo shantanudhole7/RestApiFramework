@@ -10,3 +10,6 @@ requestLogs.txt
 
 # Allure command-line tool, downloaded by allure:serve
 .allure/
+
+# Secrets for testing, not checked into source control
+src/test/java/Resources/secrets.properties

@@ -3,6 +3,9 @@ package Logger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The single shared logger for the framework; use it through static imports.
+ */
 public final class Log {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger("automation");

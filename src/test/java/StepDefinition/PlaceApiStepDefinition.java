@@ -1,26 +1,20 @@
 package StepDefinition;
 
+import Api.ApiClient;
 import ApiDataBuilder.PlaceApiDataBuilder;
 import Context.TestContext;
 import Resources.GlobalEnum;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
-import io.cucumber.java.en.When;
 import io.restassured.http.Method;
-import io.restassured.response.Response;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Locale;
 
 import static Assertion.Assertions.assertEquals;
 import static Assertion.Assertions.assertHttpNotFound;
 import static Assertion.Assertions.assertHttpOk;
-import static Assertion.Assertions.assertHttpStatus;
-import static Logger.Log.logError;
 import static Logger.Log.logInformation;
 import static Specification.Specifications.defaultRequestSpecification;
-import static Specification.Specifications.defaultResponseSpecification;
 import static Utilities.ResponseUtils.getJsonPath;
 import static io.restassured.RestAssured.given;
 
@@ -30,14 +24,17 @@ import static io.restassured.RestAssured.given;
 public class PlaceApiStepDefinition {
 
 	private final TestContext testContext;
+	private final ApiClient apiClient;
 
 	/**
 	 * Cucumber injects the scenario's shared state (cucumber-picocontainer).
 	 *
 	 * @param testContext state shared by the steps and hooks of the current scenario
+	 * @param apiClient   client to send prepared requests to the Place API and check the responses
 	 */
-	public PlaceApiStepDefinition(TestContext testContext) {
+	public PlaceApiStepDefinition(TestContext testContext, ApiClient apiClient) {
 		this.testContext = testContext;
+		this.apiClient = apiClient;
 	}
 
 	@Given("Add Place payload with {string} {string} {string} {string} {string} {string}")
@@ -49,54 +46,6 @@ public class PlaceApiStepDefinition {
 		                                           .body(placeApiDataBuilder.addPlacePayload(name, address, phoneNumber,
 		                                                                                     language, website,
 		                                                                                     types)));
-	}
-
-	/**
-	 * Send the prepared request to the given endpoint and check the response against the shared JSON response spec.
-	 * Also called by other steps, e.g. to fetch a created place with GET.
-	 * If the endpoint declares a created-id path in GlobalEnum (e.g. ADD_PLACE), registers the new id in TestContext for cleanup.
-	 *
-	 * @param apiEndPoint endpoint name from GlobalEnum, e.g. "ADD_PLACE"
-	 * @param method      HTTP method name, case-insensitive, e.g. "POST", "GET", "DELETE"
-	 * @throws IllegalArgumentException if the HTTP method is not supported
-	 */
-	@When("User calls {string} with {string} http request")
-	public void userCallsWithHttpRequest(String apiEndPoint, String method) {
-		GlobalEnum endpoint = GlobalEnum.valueOf(apiEndPoint);
-		String resource = endpoint.getResource();
-		logInformation("User calls '" + apiEndPoint + "' with '" + method + "' http request");
-
-		Method httpMethod;
-		try {
-			httpMethod = Method.valueOf(method.toUpperCase(Locale.ROOT));
-		} catch (IllegalArgumentException e) {
-			logError("Unsupported HTTP method: " + method + " | Supported: " + Arrays.toString(Method.values()));
-			throw new IllegalArgumentException("Unsupported HTTP method: " + method, e);
-		}
-
-		Response response = testContext.getRequestSpecification()
-		                               .when()
-		                               .request(httpMethod, resource)
-		                               .then()
-		                               .spec(defaultResponseSpecification())
-		                               .extract()
-		                               .response();
-		testContext.setResponse(response);
-
-		// Register created resources as soon as they exist, so cleanup deletes them even if a later step fails
-		String idPath = endpoint.getCreatedIdPath();
-		if (idPath != null) {
-			String createdId = getJsonPath(response, idPath);
-			if (createdId != null) {
-				testContext.addCreatedId(endpoint, createdId);
-			}
-		}
-	}
-
-	@Then("the API call succeeds with status code {int}")
-	public void theApiCallSucceedsWithStatusCode(Integer statusCode) {
-		logInformation("Verify the response status code is " + statusCode);
-		assertHttpStatus(testContext.getResponse(), statusCode);
 	}
 
 	/**
@@ -116,7 +65,7 @@ public class PlaceApiStepDefinition {
 		                                           .queryParam("place_id", testContext.getPlaceId()));
 
 		logInformation("Get the created place " + testContext.getPlaceId() + " with " + apiEndPoint);
-		userCallsWithHttpRequest(apiEndPoint, "GET");
+		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
 		assertHttpOk(testContext.getResponse());
 
 		logInformation("Verify that the place name matches the expected value");
@@ -135,13 +84,6 @@ public class PlaceApiStepDefinition {
 		                                           .body(deletePlacePayload));
 	}
 
-	@Then("{string} in response body is {string}")
-	public void inResponseBodyIs(String key, String expectedValue) {
-		logInformation("Verify that the response body contains " + key + " = " + expectedValue);
-		assertEquals("Verify that the response body contains " + key, expectedValue,
-		             getJsonPath(testContext.getResponse(), key));
-	}
-
 	/**
 	 * Fetch the place deleted earlier in the scenario and verify the API returns 404. Reads place_id from
 	 * TestContext (set by the @DeletePlace hook) and calls the given endpoint with GET.
@@ -156,7 +98,7 @@ public class PlaceApiStepDefinition {
 		                                           .queryParam("place_id", testContext.getPlaceId()));
 
 		logInformation("Get the deleted place " + testContext.getPlaceId() + " with " + apiEndPoint);
-		userCallsWithHttpRequest(apiEndPoint, "GET");
+		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
 
 		logInformation("Verify the deleted place is not found");
 		assertHttpNotFound(testContext.getResponse());

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /** Request body for the Add Place API, serialized to JSON by Jackson. */
-
 public class AddPlace {
 
 	private Location location;
@@ -32,13 +31,13 @@ public class AddPlace {
 		return this;
 	}
 
-	/** @return the accuracy of the place, in meters */
+	/** @return the accuracy of the place, in metres */
 	public int getAccuracy() {
 		return accuracy;
 	}
 
 	/**
-	 * @param accuracy the accuracy of the place, in meters
+	 * @param accuracy the accuracy of the place, in metres
 	 * @return this AddPlace, for chaining
 	 */
 	public AddPlace setAccuracy(int accuracy) {

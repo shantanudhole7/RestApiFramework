@@ -35,6 +35,7 @@ RestApiFramework/
 │   └── test/
 │       ├── java/
 │       │   ├── Api/
+│       │   │   ├── ApiClient.java                      # Sends requests from steps; registers created ids for cleanup
 │       │   │   └── PlaceApi.java                       # Endpoint calls for hooks and setup; returns the response
 │       │   ├── ApiDataBuilder/
 │       │   │   └── PlaceApiDataBuilder.java            # Builds Add Place and Delete Place payloads
@@ -52,6 +53,7 @@ RestApiFramework/
 │       │   ├── Specification/
 │       │   │   └── Specifications.java                 # Request/response specs
 │       │   ├── StepDefinition/
+│       │   │   ├── CommonStepDefinition.java           # Steps shared by every feature
 │       │   │   ├── Hooks.java                          # Setup for @DeletePlace, and cleanup of created places
 │       │   │   └── PlaceApiStepDefinition.java         # Place API steps, plus the generic steps shared by every feature
 │       │   └── Utilities/
@@ -143,10 +145,11 @@ returns `null` and logs a warning.
 Endpoint paths live in `GlobalEnum`, relative to the base URI:
 
 ```java
-ADD_PLACE("/maps/api/place/add/json"),
+ADD_PLACE("/maps/api/place/add/json", "place_id"),
 GET_PLACE("/maps/api/place/get/json"),
 DELETE_PLACE("/maps/api/place/delete/json");
 ```
+`ADD_PLACE` also declares where its response holds the new id, so its places are cleaned up automatically.
 
 ### Request specification
 
@@ -162,7 +165,8 @@ given().spec(defaultRequestSpecification()).body(payload)
 ```
 
 Every response is checked against the shared `Specifications.defaultResponseSpecification()`, which expects JSON content.
-Status codes are verified in the steps, so each scenario can expect its own code and the check is logged:
+Status codes are verified in the steps, so each scenario can expect its own code and the check is logged.
+Steps send every request through `ApiClient.send(endpoint, method)`, which does this:
 
 ```java
 Response response = testContext.getRequestSpecification()
@@ -227,8 +231,9 @@ scenario, steps and hooks share a `TestContext` (request, response, `place_id`).
 one per scenario and passes the same instance to every class that takes it in its constructor:
 
 ```java
-public PlaceApiStepDefinition(TestContext testContext) {
+public PlaceApiStepDefinition(TestContext testContext, ApiClient apiClient) {
     this.testContext = testContext;
+    this.apiClient = apiClient;
 }
 ```
 
@@ -240,8 +245,8 @@ in any order:
 @Before("@DeletePlace")
 public void createPlaceForDelete() throws IOException {
     Response response = placeApi.addPlace(placeApiDataBuilder.defaultAddPlacePayload());
-    String placeId = getJsonPath(response, "place_id");
-    testContext.addCreatedPlaceId(placeId);   // tracked before the check, so cleanup still deletes it
+    String placeId = getJsonPath(response, GlobalEnum.ADD_PLACE.getCreatedIdPath());
+    testContext.addCreatedId(GlobalEnum.ADD_PLACE, placeId);   // tracked before the check, so cleanup still deletes it
     assertHttpOk(response);
     testContext.setPlaceId(placeId);
 }
@@ -251,14 +256,14 @@ Hooks call the API through `Api/PlaceApi`, not through step methods. `PlaceApi` 
 specs and returns the `Response`; it keeps no state and makes no assertions, so the caller decides what to check.
 
 After every scenario, passed or failed, an untagged `@After` hook deletes every place the scenario created. Places
-are registered in `TestContext` the moment they are created (by the http request step after `ADD_PLACE`, and by the
-setup hook), so a scenario that fails halfway still cleans up. Cleanup never fails a scenario: a place that is
+are registered in `TestContext` the moment they are created (by `ApiClient` after any call to an endpoint that declares an id path,
+and by the setup hook), so a scenario that fails halfway still cleans up. Cleanup never fails a scenario: a place that is
 already gone is logged as info, and any other problem as a warning.
 
 ```java
 @After
 public void cleanUpCreatedPlaces() {
-    for (String placeId : testContext.getCreatedPlaceIds()) {
+    for (String placeId : testContext.getCreatedIds(GlobalEnum.ADD_PLACE)) {
         Response response = placeApi.deletePlace(placeId);   // 200 deleted, 404 already gone, else warning
     }
 }
@@ -294,10 +299,10 @@ Feature: Place API
     And the deleted place can no longer be fetched using "GET_PLACE"
 ```
 
-Each step maps to a method in `PlaceApiStepDefinition` by its exact text:
+Each step maps to a method in `PlaceApiStepDefinition` by its exact text or, for the generic steps (`User calls…`, `status code`, `response body`), `CommonStepDefinition`:
 
 - **Given** builds the request from the shared spec and a `PlaceApiDataBuilder` payload.
-- **When** resolves the endpoint name through `GlobalEnum` and sends the request with the given HTTP method.
+- **When** resolves the endpoint name through `GlobalEnum` and sends the request through `ApiClient`.
 - **Then** verifies the response with `Assertions`.
 - **`the place created maps to "<Name>" using "GET_PLACE"`** reads `place_id` from the response, calls `GET_PLACE`
   with it, and checks the name.

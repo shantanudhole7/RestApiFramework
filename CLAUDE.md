@@ -38,6 +38,7 @@ Academy Place API. Study project, committed step by step: each piece arrives thr
 
 - `src/main/java/Pojo/` request models (`AddPlace`, `Location`), serialized by Jackson
 - `src/test/java/Api/PlaceApi` endpoint calls for hooks and setup (stateless, no assertions)
+- `src/test/java/Api/ApiClient` sends the scenario's prepared request, stores the response, registers created ids for cleanup
 - `src/test/java/ApiDataBuilder/PlaceApiDataBuilder` Test Data Builder: builds request payloads with defaults and overrides
 - `src/test/java/Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
   `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404)
@@ -45,9 +46,10 @@ Academy Place API. Study project, committed step by step: each piece arrives thr
 - `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty`, Cucumber HTML and Allure plugins
 - `src/test/java/Features/` Cucumber feature files (`PlaceApi.feature`)
 - `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
-- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints)
+- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints; create endpoints also declare their id path)
 - `src/test/java/Specification/Specifications` Specification builder: `defaultRequestSpecification()` and `defaultResponseSpecification()`
-- `src/test/java/StepDefinition/PlaceApiStepDefinition` steps for `PlaceApi.feature`, plus the generic steps shared by every feature
+- `src/test/java/StepDefinition/CommonStepDefinition` steps shared by every feature (http call, status, response body)
+- `src/test/java/StepDefinition/PlaceApiStepDefinition` Place API steps
 - `src/test/java/StepDefinition/Hooks` tag-scoped setup (`@Before("@DeletePlace")` creates the place to delete) and
   an `@After` hook that deletes every place the scenario created
 - `src/test/java/Utilities/` `ConfigReader` (properties reader), `ResponseUtils` (JSON helper)
@@ -78,8 +80,8 @@ Academy Place API. Study project, committed step by step: each piece arrives thr
   when scenarios fail**. Always check the test results or the Cucumber report, not just the build status.
 - Cucumber links steps by exact text: changing a word in the feature (`succeed` → `succeeds`) without changing the
   annotation turns the step **undefined**.
-- The HTTP-call step accepts any REST Assured `Method` (case-insensitive) and throws `IllegalArgumentException`
-  for anything else.
+- The HTTP-call step (in `CommonStepDefinition`) accepts any REST Assured `Method` (case-insensitive) and throws
+  `IllegalArgumentException` for anything else.
 - A failing `@Before` hook marks the scenario failed and skips all its steps; check the hook's log lines first.
 - Step and hook classes get `TestContext` through their constructor; creating one with `new` gives a separate,
   empty context, and later steps see `null`.
@@ -90,8 +92,9 @@ Academy Place API. Study project, committed step by step: each piece arrives thr
 - `getJsonPath` returns `null` for a missing JSON path (and logs a warning); a `null` in an assertion usually
   means a wrong path or an error response.
 - `getPropertiesValue` returns `null` for a missing key (and logs a warning); check the key's spelling and case first.
-- Every place created in a scenario must be registered with `testContext.addCreatedPlaceId(...)`, or the `@After`
-  hook can't clean it up. The When step and the Delete setup hook already do this.
+- Created resources are cleaned up only if they are registered. `ApiClient` registers them automatically when the
+  endpoint declares its id path in `GlobalEnum` (`ADD_PLACE(…, "place_id")`); a new create endpoint without an id
+  path is never cleaned up. Setup hooks that call an `Api` class directly register with `testContext.addCreatedId(...)`.
 - Cleanup log lines (`Cleanup: …`) appear after the last step; a `WARN | Cleanup: could not delete place` line
   means a place may have been left on the live API.
 - Reports are written only when `TestRunner` (or `mvn test`) runs; the green arrow in a `.feature` file ignores
@@ -133,3 +136,6 @@ Add one line per decision so future sessions keep it.
   methods, used via static imports, never extended; TestDataBuilder → `ApiDataBuilder/PlaceApiDataBuilder` and
   StepDefinition → `PlaceApiStepDefinition`, one data builder and one step class per API.
 - 2026-11-09: Branches are named `<type>/<short-name>` with type `feature`, `refactor`, `fix` or `chore`; one topic per branch.
+- 2026-11-10: Create endpoints declare the JSON path of the new id in `GlobalEnum`; `ApiClient` registers created ids per endpoint in `TestContext` for cleanup,
+  so shared code has no resource-specific conditions and features stay unchanged.
+- 2026-11-10: Generic steps live in `CommonStepDefinition`; requests from steps go through `ApiClient`; step classes never call each other's step methods.

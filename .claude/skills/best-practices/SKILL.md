@@ -16,7 +16,9 @@ src/
 ├── main/java/
 │   └── Pojo/                                   # Request/response models (serialized by Jackson)
 ├── test/java/
-│   ├── Api/PlaceApi                            # Endpoint calls for hooks and setup; returns the response
+│   ├── Api/                                    # API layer
+│   │   ├── ApiClient                           # sends step requests, registers created ids
+│   │   └── PlaceApi                            # endpoint calls for hooks
 │   ├── ApiDataBuilder/PlaceApiDataBuilder      # Test Data Builder: builds request payloads with defaults and overrides
 │   ├── Assertion/Assertions                    # Logging assertions (PASS/FAIL lines)
 │   ├── cucumber/Options/
@@ -28,7 +30,7 @@ src/
 │   │   ├── Global.properties                   # Settings: base URI, API key
 │   │   └── GlobalEnum                          # API endpoint paths
 │   ├── Specification/Specifications            # Request/response specs
-│   ├── StepDefinition/                         # PlaceApiStepDefinition (steps) and Hooks
+│   ├── StepDefinition/                         # CommonStepDefinition (shared steps), PlaceApiStepDefinition, Hooks
 │   └── Utilities/                              # ConfigReader (settings), ResponseUtils (JSON path)
 └── test/resources/
     ├── logback-test.xml                        # Log format and outputs
@@ -96,6 +98,8 @@ src/
 - Every endpoint path is a constant in `GlobalEnum`, read with `getResource()`.
 - Paths start with `/` and are relative to `api.base.uri`.
 - Add a new endpoint as a new constant; never hard-code a path elsewhere.
+- An endpoint that creates something declares the JSON path of the new id as its second value (`ADD_PLACE("/…", "place_id")`).
+  `ApiClient` uses it to register created ids for cleanup; an endpoint without it is never cleaned up.
 - Feature files name endpoints by constant (`"ADD_PLACE"`); steps resolve them with `GlobalEnum.valueOf(...)`.
   Renaming a constant means updating those strings in the feature files too.
 
@@ -233,8 +237,9 @@ Feature: Place API
 - Use every step parameter. A parameter that the body ignores (or a value hard-coded instead of it)
   makes the feature lie about what is tested.
 - Keep state between steps in `TestContext` (§17), never in fields of the step class.
-- The HTTP-call step sends any REST Assured `Method` (case-insensitive) with `request(Method, path)`. An unknown
-  method logs an error and throws `IllegalArgumentException`, so a typo fails clearly.
+- The HTTP-call step (in `CommonStepDefinition`) accepts any REST Assured `Method` (case-insensitive) and sends through `ApiClient`,
+  which uses `request(Method, path)`. An unknown method logs an error and throws `IllegalArgumentException`, so a typo fails clearly.
+- Steps that send a request call `ApiClient.send(...)`; a step class never calls another step class's step methods.
 - Each step logs its action with `logInformation`, and verification steps log before they check.
 
 ## 17. Scenario state, hooks and the API layer
@@ -246,9 +251,9 @@ Feature: Place API
 - Hooks live in `StepDefinition/Hooks`. Setup hooks are scoped by tag (`@Before("@DeletePlace")`), because
   different scenarios need different data. Use them for setup the reader doesn't need to see; business setup the
   scenario is about stays a visible step.
-- Teardown is driven by resource tracking, not by tags: whoever creates a place registers it at once with
-  `testContext.addCreatedPlaceId(id)` (before any check that could fail), and the untagged `@After` cleanup hook
-  deletes every tracked place after every scenario, passed or failed.
+- Teardown is driven by resource tracking, not by tags: whoever creates a resource registers it at once (before any check that could fail):
+  `ApiClient` for calls from steps, via the endpoint's id path, and setup hooks with `testContext.addCreatedId(endpoint, id)`.
+  The untagged `@After` cleanup hook deletes every tracked resource after every scenario, passed or failed.
 - Cleanup never fails a scenario. 200 (deleted) and 404 (already gone) are logged as info; any other status or
   exception is logged as a warning with the status and body.
 - Hooks depend on `TestContext`, `Api` classes and `PlaceApiDataBuilder`, never on step classes. When a hook creates
@@ -257,6 +262,8 @@ Feature: Place API
 - `Api` classes (`PlaceApi`) send one request each (`addPlace`, `deletePlace`) from the shared specs and return
   the `Response`: no state, no assertions. Endpoints come from `GlobalEnum` constants (`GlobalEnum.ADD_PLACE`),
   not strings.
+- `ApiClient` is injected (PicoContainer), not static, because it uses the scenario's `TestContext`.
+  Shared classes (`ApiClient`, `CommonStepDefinition`) contain no resource-specific conditions.
 
 ## 18. Reporting
 

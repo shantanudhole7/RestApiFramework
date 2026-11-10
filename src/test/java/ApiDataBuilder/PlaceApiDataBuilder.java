@@ -1,10 +1,10 @@
 package ApiDataBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import Pojo.AddPlace;
 import Pojo.Location;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Builds request bodies for the Place API.
@@ -85,6 +85,6 @@ public class PlaceApiDataBuilder {
 	 */
 	public AddPlace defaultAddPlacePayload() {
 		return addPlacePayload(DEFAULT_NAME, DEFAULT_ADDRESS, DEFAULT_PHONE_NUMBER, DEFAULT_LANGUAGE, DEFAULT_WEBSITE,
-				DEFAULT_TYPES);
+		                       DEFAULT_TYPES);
 	}
 }

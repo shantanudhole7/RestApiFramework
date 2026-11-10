@@ -26,37 +26,44 @@ built from POJOs and a shared request specification, and every check is logged a
 ```
 RestApiFramework/
 ├── .claude/skills/
-│   ├── best-practices/SKILL.md               # Coding standards (applied by Claude Code automatically)
-│   └── test-review/SKILL.md                  # /test-review: reviews the code against the standards
-├── .github/CODEOWNERS                        # Every pull request needs the code owner's review
+│   ├── best-practices/SKILL.md                         # Coding standards (applied by Claude Code automatically)
+│   └── test-review/SKILL.md                            # /test-review: reviews the code against the standards
+├── .github/CODEOWNERS                                  # Every pull request needs the code owner's review
 ├── src/
 │   ├── main/java/
-│   │   └── Pojo/                             # Request models: AddPlace, Location
+│   │   └── Pojo/                                       # Request models: AddPlace, Location
 │   └── test/
 │       ├── java/
 │       │   ├── Api/
-│       │   │   └── PlaceApi.java             # Endpoint calls for hooks and setup; returns the response
-│       │   ├── Assertion/                    # Assertions: logging assertEquals and HTTP status checks (PASS/FAIL)
+│       │   │   ├── ApiClient.java                      # Sends requests from steps; registers created ids for cleanup
+│       │   │   └── PlaceApi.java                       # Endpoint calls for hooks and setup; returns the response
+│       │   ├── ApiDataBuilder/
+│       │   │   └── PlaceApiDataBuilder.java            # Builds Add Place and Delete Place payloads
+│       │   ├── Assertion/                              # Assertions: logging assertEquals and HTTP status checks (PASS/FAIL)
 │       │   ├── Context/
-│       │   │   └── TestContext.java          # Per-scenario state: request, response, place_id
-│       │   ├── Logger/                       # Log: logInformation, logWarning, logError
-│       │   ├── Resources/
-│       │   │   ├── Global.properties         # Settings: base URI, API key
-│       │   │   ├── GlobalEnum.java           # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
-│       │   │   ├── TestDataBuilder.java      # Builds Add Place (custom or default) and Delete Place payloads
-│       │   │   └── Utils.java                # Request/response specs, properties reader, JSON path helper
+│       │   │   └── TestContext.java                    # Per-scenario state: request, response, place_id
+│       │   ├── cucumber/Options/
+│       │   │   └── TestRunner.java                     # JUnit runner: features path, glue, report plugins
 │       │   ├── Features/
-│       │   │   └── PlaceApi.feature          # Place API scenarios
+│       │   │   └── PlaceApi.feature                    # Place API scenarios
+│       │   ├── Logger/                                 # Log: logInformation, logWarning, logError
+│       │   ├── Resources/
+│       │   │   ├── Global.properties                   # Settings: base URI, API key
+│       │   │   └── GlobalEnum.java                     # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
+│       │   ├── Specification/
+│       │   │   └── Specifications.java                 # Request/response specs
 │       │   ├── StepDefinition/
-│       │   │   ├── Hooks.java                # Setup for @DeletePlace, and cleanup of created places
-│       │   │   └── StepDefinition.java       # Step definitions for the feature files
-│       │   └── cucumber/Options/
-│       │       └── TestRunner.java           # JUnit runner: features path, glue, report plugins
+│       │   │   ├── CommonStepDefinition.java           # Steps shared by every feature
+│       │   │   ├── Hooks.java                          # Setup for @DeletePlace, and cleanup of created places
+│       │   │   └── PlaceApiStepDefinition.java         # Place API steps, plus the generic steps shared by every feature
+│       │   └── Utilities/
+│       │       ├── ConfigReader.java                   # Reads configuration properties
+│       │       └── ResponseUtils.java                  # Utility methods for handling API responses
 │       └── resources/
-│           ├── logback-test.xml              # Log format and outputs
-│           └── allure.properties             # Allure results folder
-├── CLAUDE.md                                 # Project context and rules for Claude Code
-├── pom.xml                                   # Dependencies and plugins
+│           ├── logback-test.xml                        # Log format and outputs
+│           └── allure.properties                       # Allure results folder
+├── CLAUDE.md                                           # Project context and rules for Claude Code
+├── pom.xml                                             # Dependencies and plugins
 └── README.md
 ```
 
@@ -132,20 +139,21 @@ Running a scenario from the green arrow in the `.feature` file doesn't write rep
 
 ### Configuration and endpoints
 
-Settings live in `Global.properties` and are read only through `Utils.getPropertiesValue("key")`. A missing key
+Settings live in `Global.properties` and are read only through `ConfigReader.getPropertiesValue("key")`. A missing key
 returns `null` and logs a warning.
 
 Endpoint paths live in `GlobalEnum`, relative to the base URI:
 
 ```java
-ADD_PLACE("/maps/api/place/add/json"),
+ADD_PLACE("/maps/api/place/add/json", "place_id"),
 GET_PLACE("/maps/api/place/get/json"),
 DELETE_PLACE("/maps/api/place/delete/json");
 ```
+`ADD_PLACE` also declares where its response holds the new id, so its places are cleaned up automatically.
 
 ### Request specification
 
-Every request starts from one shared specification, built once per run by `Utils.defaultRequestSpecification()`:
+Every request starts from one shared specification, built once per run by `Specifications.defaultRequestSpecification()`:
 
 - base URI and API key from `Global.properties`
 - JSON content type
@@ -156,8 +164,9 @@ Every request starts from one shared specification, built once per run by `Utils
 given().spec(defaultRequestSpecification()).body(payload)
 ```
 
-Every response is checked against the shared `Utils.defaultResponseSpecification()`, which expects JSON content.
-Status codes are verified in the steps, so each scenario can expect its own code and the check is logged:
+Every response is checked against the shared `Specifications.defaultResponseSpecification()`, which expects JSON content.
+Status codes are verified in the steps, so each scenario can expect its own code and the check is logged.
+Steps send every request through `ApiClient.send(endpoint, method)`, which does this:
 
 ```java
 Response response = testContext.getRequestSpecification()
@@ -175,7 +184,7 @@ The HTTP method comes from the feature text (`"POST"`, `"GET"`, case-insensitive
 
 ### Request bodies
 
-`TestDataBuilder` builds the request bodies:
+`PlaceApiDataBuilder` builds the request bodies:
 
 - `addPlacePayload(name, address, phoneNumber, language, website, types)` returns an `AddPlace` POJO, serialized to
   JSON by Jackson. The location (`LATITUDE`, `LONGITUDE`) and `ACCURACY` are fixed test values, defined as constants.
@@ -184,10 +193,10 @@ The HTTP method comes from the feature text (`"POST"`, `"GET"`, case-insensitive
   exist. This is the Test Data Builder pattern: defaults in one place, tests override only what they care about.
 
 ```java
-TestDataBuilder testDataBuilder = new TestDataBuilder();
-AddPlace addPlace = testDataBuilder.addPlacePayload(name, address, phoneNumber, language, website, types);
-String deleteBody = testDataBuilder.deletePlacePayload(placeId);
-AddPlace setupPlace = testDataBuilder.defaultAddPlacePayload();
+PlaceApiDataBuilder placeApiDataBuilder = new PlaceApiDataBuilder();
+AddPlace addPlace = placeApiDataBuilder.addPlacePayload(name, address, phoneNumber, language, website, types);
+String deleteBody = placeApiDataBuilder.deletePlacePayload(placeId);
+AddPlace setupPlace = placeApiDataBuilder.defaultAddPlacePayload();
 ```
 
 POJO fields are camelCase; JSON keys that differ are mapped with `@JsonProperty`, such as
@@ -195,7 +204,7 @@ POJO fields are camelCase; JSON keys that differ are mapped with `@JsonProperty`
 
 ### Reading responses
 
-`Utils.getJsonPath(response, "path")` reads a value from a JSON response, including nested paths such as
+`ResponseUtils.getJsonPath(response, "path")` reads a value from a JSON response, including nested paths such as
 `location.lat`. A missing path returns `null` and logs a warning, so an assertion fails clearly.
 
 ### Assertions and logging
@@ -222,8 +231,9 @@ scenario, steps and hooks share a `TestContext` (request, response, `place_id`).
 one per scenario and passes the same instance to every class that takes it in its constructor:
 
 ```java
-public StepDefinition(TestContext testContext) {
+public PlaceApiStepDefinition(TestContext testContext, ApiClient apiClient) {
     this.testContext = testContext;
+    this.apiClient = apiClient;
 }
 ```
 
@@ -234,9 +244,9 @@ in any order:
 ```java
 @Before("@DeletePlace")
 public void createPlaceForDelete() throws IOException {
-    Response response = placeApi.addPlace(testDataBuilder.defaultAddPlacePayload());
-    String placeId = placeApi.getJsonPath(response, "place_id");
-    testContext.addCreatedPlaceId(placeId);   // tracked before the check, so cleanup still deletes it
+    Response response = placeApi.addPlace(placeApiDataBuilder.defaultAddPlacePayload());
+    String placeId = getJsonPath(response, GlobalEnum.ADD_PLACE.getCreatedIdPath());
+    testContext.addCreatedId(GlobalEnum.ADD_PLACE, placeId);   // tracked before the check, so cleanup still deletes it
     assertHttpOk(response);
     testContext.setPlaceId(placeId);
 }
@@ -246,14 +256,14 @@ Hooks call the API through `Api/PlaceApi`, not through step methods. `PlaceApi` 
 specs and returns the `Response`; it keeps no state and makes no assertions, so the caller decides what to check.
 
 After every scenario, passed or failed, an untagged `@After` hook deletes every place the scenario created. Places
-are registered in `TestContext` the moment they are created (by the http request step after `ADD_PLACE`, and by the
-setup hook), so a scenario that fails halfway still cleans up. Cleanup never fails a scenario: a place that is
+are registered in `TestContext` the moment they are created (by `ApiClient` after any call to an endpoint that declares an id path,
+and by the setup hook), so a scenario that fails halfway still cleans up. Cleanup never fails a scenario: a place that is
 already gone is logged as info, and any other problem as a warning.
 
 ```java
 @After
 public void cleanUpCreatedPlaces() {
-    for (String placeId : testContext.getCreatedPlaceIds()) {
+    for (String placeId : testContext.getCreatedIds(GlobalEnum.ADD_PLACE)) {
         Response response = placeApi.deletePlace(placeId);   // 200 deleted, 404 already gone, else warning
     }
 }
@@ -289,10 +299,10 @@ Feature: Place API
     And the deleted place can no longer be fetched using "GET_PLACE"
 ```
 
-Each step maps to a method in `StepDefinition` by its exact text:
+Each step maps to a method in `PlaceApiStepDefinition` by its exact text or, for the generic steps (`User calls…`, `status code`, `response body`), `CommonStepDefinition`:
 
-- **Given** builds the request from the shared spec and a `TestDataBuilder` payload.
-- **When** resolves the endpoint name through `GlobalEnum` and sends the request with the given HTTP method.
+- **Given** builds the request from the shared spec and a `PlaceApiDataBuilder` payload.
+- **When** resolves the endpoint name through `GlobalEnum` and sends the request through `ApiClient`.
 - **Then** verifies the response with `Assertions`.
 - **`the place created maps to "<Name>" using "GET_PLACE"`** reads `place_id` from the response, calls `GET_PLACE`
   with it, and checks the name.
@@ -312,8 +322,8 @@ Cucumber HTML report (see [Reports](#reports)).
 ```bash
 git switch main
 git pull
-git switch -c feature/<name>
-git push -u origin feature/<name>
+git switch -c <type>/<name>
+git push -u origin <type>/<name>
 # make changes, in small working steps
 git add <files>
 git commit -m "Add <what changed>"
@@ -321,7 +331,7 @@ git push
 ```
 
 Then open a pull request into `main` with a **What**, **Changes** and **How to test** section.
-Branch names must start with `feature/`.
+Branch names start with `feature/`, `refactor/`, `fix/` or `chore/`.
 
 ---
 

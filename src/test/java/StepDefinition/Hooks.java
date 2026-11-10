@@ -1,8 +1,9 @@
 package StepDefinition;
 
 import Api.PlaceApi;
+import ApiDataBuilder.PlaceApiDataBuilder;
 import Context.TestContext;
-import Resources.TestDataBuilder;
+import Resources.GlobalEnum;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.restassured.response.Response;
@@ -13,6 +14,7 @@ import java.util.List;
 import static Assertion.Assertions.assertHttpOk;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
+import static Utilities.ResponseUtils.getJsonPath;
 
 /**
  * Cucumber hooks: setup and cleanup that run around scenarios. Setup hooks are selected by tag;
@@ -48,13 +50,13 @@ public class Hooks {
 	public void createPlaceForDelete() throws IOException {
 		logInformation("Hook: create a place for the Delete Place scenario");
 		PlaceApi placeApi = new PlaceApi();
-		TestDataBuilder testDataBuilder = new TestDataBuilder();
+		PlaceApiDataBuilder placeApiDataBuilder = new PlaceApiDataBuilder();
 
-		Response response = placeApi.addPlace(testDataBuilder.defaultAddPlacePayload());
-		String placeId = placeApi.getJsonPath(response, "place_id");
+		Response response = placeApi.addPlace(placeApiDataBuilder.defaultAddPlacePayload());
+		String placeId = getJsonPath(response, GlobalEnum.ADD_PLACE.getCreatedIdPath());
 		if (placeId != null) {
 			// Track before the status check, so the place is cleaned up even if the check fails
-			testContext.addCreatedPlaceId(placeId);
+			testContext.addCreatedId(GlobalEnum.ADD_PLACE, placeId);
 		}
 		assertHttpOk(response);
 		testContext.setPlaceId(placeId);
@@ -66,7 +68,7 @@ public class Hooks {
 	 */
 	@After
 	public void cleanUpCreatedPlaces() {
-		List<String> placeIds = testContext.getCreatedPlaceIds();
+		List<String> placeIds = testContext.getCreatedIds(GlobalEnum.ADD_PLACE);
 		if (placeIds.isEmpty()) {
 			return;
 		}

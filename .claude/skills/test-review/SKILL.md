@@ -42,7 +42,7 @@ Never review generated or IDE files (`target/`, `.idea/`, `requestLogs.txt`).
 4. Check every reference — don't assume:
    - endpoint names in feature files exist as constants in `GlobalEnum`
    - properties keys passed to `getPropertiesValue(...)` exist in `Global.properties`
-   - builder methods called exist in `TestDataBuilder`
+   - builder methods called exist in `PlaceApiDataBuilder`
    - the runner's `features` path and `glue` package exist
    - POJO field names (or their `@JsonProperty` names) match the JSON keys they represent
 5. Compare every line against the best practices: naming, POJOs, configuration, endpoints, requests and

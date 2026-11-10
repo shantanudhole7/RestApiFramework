@@ -1,4 +1,4 @@
-package Resources;
+package ApiDataBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +9,7 @@ import Pojo.Location;
 /**
  * Builds request bodies for the Place API.
  */
-public class TestDataBuilder {
+public class PlaceApiDataBuilder {
 
 	/** Fixed test latitude sent with every new place. */
 	private static final double LATITUDE = -38.383494;

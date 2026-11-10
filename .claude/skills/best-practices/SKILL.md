@@ -14,47 +14,52 @@ this file in the same pull request when a rule changes.
 ```
 src/
 ├── main/java/
-│   └── Pojo/                     # Request/response models (serialized by Jackson)
+│   └── Pojo/                                   # Request/response models (serialized by Jackson)
 ├── test/java/
-│   ├── Api/PlaceApi              # Endpoint calls for hooks and setup; returns the response
-│   ├── Assertion/Assertions      # Logging assertions (PASS/FAIL lines)
-│   ├── Context/TestContext       # Per-scenario state shared by steps and hooks
-│   ├── Logger/Log                # The single shared logger
+│   ├── Api/                                    # API layer
+│   │   ├── ApiClient                           # sends step requests, registers created ids
+│   │   └── PlaceApi                            # endpoint calls for hooks
+│   ├── ApiDataBuilder/PlaceApiDataBuilder      # Test Data Builder: builds request payloads with defaults and overrides
+│   ├── Assertion/Assertions                    # Logging assertions (PASS/FAIL lines)
+│   ├── cucumber/Options/
+│   │   └── TestRunner                          # JUnit runner: features path, glue, report plugins
+│   ├── Context/TestContext                     # Per-scenario state shared by steps and hooks
+│   ├── Features/                               # Cucumber feature files, one per API area (PlaceApi.feature)
+│   ├── Logger/Log                              # The single shared logger
 │   ├── Resources/
-│   │   ├── Global.properties     # Settings: base URI, API key
-│   │   ├── GlobalEnum            # API endpoint paths
-│   │   ├── TestDataBuilder       # Builds request payloads
-│   │   └── Utils                 # Request/response specs, properties reader, JSON helper
-│   ├── Features/                 # Cucumber feature files, one per API area (PlaceApi.feature)
-│   ├── StepDefinition/           # Step definitions (StepDefinition) and hooks (Hooks)
-│   └── cucumber/Options/
-│       └── TestRunner            # JUnit runner: features path, glue, report plugins
+│   │   ├── Global.properties                   # Settings: base URI, API key
+│   │   └── GlobalEnum                          # API endpoint paths
+│   ├── Specification/Specifications            # Request/response specs
+│   ├── StepDefinition/                         # CommonStepDefinition (shared steps), PlaceApiStepDefinition, Hooks
+│   └── Utilities/                              # ConfigReader (settings), ResponseUtils (JSON path)
 └── test/resources/
-    ├── logback-test.xml          # Log format and outputs
-    └── allure.properties         # Allure results folder (target/allure-results)
+    ├── logback-test.xml                        # Log format and outputs
+    └── allure.properties                       # Allure results folder (target/allure-results)
 ```
 
 - Models that describe the API's JSON go in `src/main/java/Pojo`.
 - Everything that only exists to run tests goes in `src/test/java`.
 - Feature files stay in `src/test/java/Features`; the runner reads them by file path.
 - Non-Java test files that must be on the classpath (like `logback-test.xml`) go in `src/test/resources`.
+- Helpers (`Specifications`, `ConfigReader`, `ResponseUtils`) are final classes with a private constructor and only static methods.
+  Use them through static imports; never extend them or create instances. One class per responsibility.
 
 ## 2. Naming
 
-| Item                      | Convention                                               | Example                                                               |
-|---------------------------|----------------------------------------------------------|-----------------------------------------------------------------------|
-| Class, enum               | PascalCase                                               | `Assertions`, `GlobalEnum`                                            |
-| Method                    | camelCase                                                | `getPropertiesValue`, `defaultRequestSpecification`, `logInformation` |
-| Step definition method    | camelCase, from the step text                            | `addPlacePayloadWith`, `userCallsWithHttpRequest`                     |
-| Variable, parameter       | camelCase                                                | `baseUri`, `globalKey`                                                |
-| Constant (`static final`) | UPPER_SNAKE_CASE                                         | `PROPERTIES_FILE`, `REQUEST_LOG_FILE`                                 |
-| Enum constant             | UPPER_SNAKE_CASE, no `API` suffix                        | `ADD_PLACE`, `GET_PLACE`, `DELETE_PLACE`                              |
-| Properties key            | lowercase, dot-separated                                 | `api.base.uri`, `api.key`                                             |
-| Package                   | PascalCase (existing project style)                      | `Pojo`, `Resources`, `Assertion`, `Logger`, `Api`, `Context`          |
-| POJO field                | camelCase; map a different JSON key with `@JsonProperty` | `phoneNumber` → `"phone_number"`                                      |
-| Feature file              | PascalCase, one per API area                             | `PlaceApi.feature`                                                    |
-| Cucumber tag              | PascalCase with `@`                                      | `@PlaceApi`, `@AddPlace`, `@Smoke`                                    |
-| Branch                    | `feature/<short-name>`                                   | `feature/add-place-scenario`                                          |
+| Item                      | Convention                                                          | Example                                                               |
+|---------------------------|---------------------------------------------------------------------|-----------------------------------------------------------------------|
+| Class, enum               | PascalCase                                                          | `Assertions`, `GlobalEnum`                                            |
+| Method                    | camelCase                                                           | `getPropertiesValue`, `defaultRequestSpecification`, `logInformation` |
+| Step definition method    | camelCase, from the step text                                       | `addPlacePayloadWith`, `userCallsWithHttpRequest`                     |
+| Variable, parameter       | camelCase                                                           | `baseUri`, `globalKey`                                                |
+| Constant (`static final`) | UPPER_SNAKE_CASE                                                    | `PROPERTIES_FILE`, `REQUEST_LOG_FILE`                                 |
+| Enum constant             | UPPER_SNAKE_CASE, no `API` suffix                                   | `ADD_PLACE`, `GET_PLACE`, `DELETE_PLACE`                              |
+| Properties key            | lowercase, dot-separated                                            | `api.base.uri`, `api.key`                                             |
+| Package                   | PascalCase (existing project style)                                 | `Pojo`, `Resources`, `Assertion`, `Logger`, `Api`, `Context`          |
+| POJO field                | camelCase; map a different JSON key with `@JsonProperty`            | `phoneNumber` → `"phone_number"`                                      |
+| Feature file              | PascalCase, one per API area                                        | `PlaceApi.feature`                                                    |
+| Cucumber tag              | PascalCase with `@`                                                 | `@PlaceApi`, `@AddPlace`, `@Smoke`                                    |
+| Branch                    | `<type>/<short-name>`; type `feature`, `refactor`, `fix` or `chore` | `feature/add-place-scenario`, `refactor/single-responsibility`        |
 
 - Never name a method the same as a library method it calls (for example, the custom `assertEquals`
   calls JUnit as `Assert.assertEquals(...)`; otherwise it would call itself).
@@ -82,7 +87,7 @@ src/
 ## 4. Configuration
 
 - Settings live in `Resources/Global.properties` as `key = value`, without quotes.
-- Read them only through `Utils.getPropertiesValue("key")`. Never hard-code a base URI, API key or
+- Read them only through `ConfigReader.getPropertiesValue("key")`. Never hard-code a base URI, API key or
   other setting in Java code.
 - A missing key returns `null` and logs a warning, so check spelling and case first when a value is `null`.
 - Real secrets (passwords, tokens, private keys) are never committed. The current `api.key` is the
@@ -93,6 +98,8 @@ src/
 - Every endpoint path is a constant in `GlobalEnum`, read with `getResource()`.
 - Paths start with `/` and are relative to `api.base.uri`.
 - Add a new endpoint as a new constant; never hard-code a path elsewhere.
+- An endpoint that creates something declares the JSON path of the new id as its second value (`ADD_PLACE("/…", "place_id")`).
+  `ApiClient` uses it to register created ids for cleanup; an endpoint without it is never cleaned up.
 - Feature files name endpoints by constant (`"ADD_PLACE"`); steps resolve them with `GlobalEnum.valueOf(...)`.
   Renaming a constant means updating those strings in the feature files too.
 
@@ -104,7 +111,7 @@ src/
 - Every response is checked against the shared response spec with
   `.then().spec(defaultResponseSpecification()).extract().response()`. It only expects JSON content;
   status codes are verified in the steps, so each scenario can expect its own code and the check is logged.
-- Request bodies are built in `TestDataBuilder`: POJOs for anything beyond a single field.
+- Request bodies are built in the API's data builder (`PlaceApiDataBuilder` for Place), one per API: POJOs for anything beyond a single field.
   Fixed test values (location, accuracy) are named constants there, never inline numbers.
 - Setup that only needs a valid entity uses a default builder method (`defaultAddPlacePayload()`) with named
   fake constants: the Test Data Builder pattern.
@@ -177,12 +184,12 @@ src/
 
 ## 14. Generated files
 
-Never commit build output or IDE files. `.gitignore` covers:
-`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/`.
+Never commit build output, IDE files or local secrets. `.gitignore` covers:
+`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/` and `src/test/java/Resources/secrets.properties` (local credentials).
 
 ## 15. Git workflow
 
-- `main` is protected: every change goes through a `feature/*` branch and a pull request reviewed by
+- `main` is protected: every change goes through a `<type>/<name>` branch and a pull request reviewed by
   the code owner (`.github/CODEOWNERS`).
 - One topic per branch and pull request; keep them small. Within a branch, commit in small working steps.
 - Stage files explicitly (`git add <files>`); check `git status` before committing.
@@ -190,7 +197,7 @@ Never commit build output or IDE files. `.gitignore` covers:
   Use a second `-m` for a bullet list of details when helpful.
 - Pull request description sections: **What**, **Changes**, **How to test**.
 - After merging: delete the branch on GitHub, then locally
-  `git switch main`, `git pull`, `git branch -D feature/<name>`.
+  `git switch main`, `git pull`, `git branch -D <type>/<name>`.
 
 ## 16. Feature files and step definitions
 
@@ -230,30 +237,33 @@ Feature: Place API
 - Use every step parameter. A parameter that the body ignores (or a value hard-coded instead of it)
   makes the feature lie about what is tested.
 - Keep state between steps in `TestContext` (§17), never in fields of the step class.
-- The HTTP-call step sends any REST Assured `Method` (case-insensitive) with `request(Method, path)`. An unknown
-  method logs an error and throws `IllegalArgumentException`, so a typo fails clearly.
+- The HTTP-call step (in `CommonStepDefinition`) accepts any REST Assured `Method` (case-insensitive) and sends through `ApiClient`,
+  which uses `request(Method, path)`. An unknown method logs an error and throws `IllegalArgumentException`, so a typo fails clearly.
+- Steps that send a request call `ApiClient.send(...)`; a step class never calls another step class's step methods.
 - Each step logs its action with `logInformation`, and verification steps log before they check.
 
 ## 17. Scenario state, hooks and the API layer
 
 - Scenario state (request, response, ids) lives in `Context.TestContext`. cucumber-picocontainer creates one
   instance per scenario and injects it into every step and hook class that takes it in its constructor.
-- Never share state through `static` fields, and never create glue classes with `new`: `new StepDefinition()`
+- Never share state through `static` fields, and never create glue classes with `new`: `new PlaceApiStepDefinition()`
   gets its own empty state, not the scenario's.
 - Hooks live in `StepDefinition/Hooks`. Setup hooks are scoped by tag (`@Before("@DeletePlace")`), because
   different scenarios need different data. Use them for setup the reader doesn't need to see; business setup the
   scenario is about stays a visible step.
-- Teardown is driven by resource tracking, not by tags: whoever creates a place registers it at once with
-  `testContext.addCreatedPlaceId(id)` (before any check that could fail), and the untagged `@After` cleanup hook
-  deletes every tracked place after every scenario, passed or failed.
+- Teardown is driven by resource tracking, not by tags: whoever creates a resource registers it at once (before any check that could fail):
+  `ApiClient` for calls from steps, via the endpoint's id path, and setup hooks with `testContext.addCreatedId(endpoint, id)`.
+  The untagged `@After` cleanup hook deletes every tracked resource after every scenario, passed or failed.
 - Cleanup never fails a scenario. 200 (deleted) and 404 (already gone) are logged as info; any other status or
   exception is logged as a warning with the status and body.
-- Hooks depend on `TestContext`, `Api` classes and `TestDataBuilder`, never on step classes. When a hook creates
+- Hooks depend on `TestContext`, `Api` classes and `PlaceApiDataBuilder`, never on step classes. When a hook creates
   data a step uses, add a `#` comment in the scenario that names the hook.
 - A setup hook verifies its own call (`assertHttpOk`), so a failed setup fails in the hook and skips the steps.
 - `Api` classes (`PlaceApi`) send one request each (`addPlace`, `deletePlace`) from the shared specs and return
   the `Response`: no state, no assertions. Endpoints come from `GlobalEnum` constants (`GlobalEnum.ADD_PLACE`),
   not strings.
+- `ApiClient` is injected (PicoContainer), not static, because it uses the scenario's `TestContext`.
+  Shared classes (`ApiClient`, `CommonStepDefinition`) contain no resource-specific conditions.
 
 ## 18. Reporting
 
@@ -280,6 +290,6 @@ Feature: Place API
 - [ ] Imports optimized, Java code formatted
 - [ ] No real personal data in code or feature files
 - [ ] Only this topic's files staged
-- [ ] Shared state through `TestContext` only: no `static` state, no `new StepDefinition()`
+- [ ] Shared state through `TestContext` only: no `static` state, no `new PlaceApiStepDefinition()`
 - [ ] A new or changed rule is applied to existing code too: search for the old pattern and fix every match
 - [ ] After adding a tool or plugin, run it once and check `git status`: generated files go in `.gitignore`

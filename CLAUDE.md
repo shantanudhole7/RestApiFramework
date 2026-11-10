@@ -1,8 +1,7 @@
 # CLAUDE.md — RestApiFramework
 
 REST API test automation framework built with Java, REST Assured, Cucumber and Maven, for the Rahul Shetty
-Academy Place API. Study project, committed step by step: each piece arrives through its own `feature/*` branch
-and pull request.
+Academy Place API. Study project, committed step by step: each piece arrives through its own `feature/*`, `refactor/*`, `fix/*` or `chore/*` branch and pull request.
 
 - Coding standards: the `best-practices` skill (`.claude/skills/best-practices/SKILL.md`). Follow it for every
   POJO, utility, assertion, logger call, config value, endpoint, feature file or step definition.
@@ -23,7 +22,7 @@ and pull request.
 - Java 11 or newer (logback-classic requires it), Maven, IntelliJ IDEA.
 - `mvn` is not on the PATH on my machine yet: run Maven from IntelliJ's **Maven tool window → Lifecycle**.
   The `mvn` commands below work once Maven is installed.
-- Run from the project root: `Utils` locates `Global.properties`, and `TestRunner` locates the feature files,
+- Run from the project root: `ConfigReader` locates `Global.properties`, and `TestRunner` locates the feature files,
   relative to the folder Maven is started from.
 
 ## Commands
@@ -39,17 +38,21 @@ and pull request.
 
 - `src/main/java/Pojo/` request models (`AddPlace`, `Location`), serialized by Jackson
 - `src/test/java/Api/PlaceApi` endpoint calls for hooks and setup (stateless, no assertions)
+- `src/test/java/Api/ApiClient` sends the scenario's prepared request, stores the response, registers created ids for cleanup
+- `src/test/java/ApiDataBuilder/PlaceApiDataBuilder` Test Data Builder: builds request payloads with defaults and overrides
 - `src/test/java/Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
   `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404)
 - `src/test/java/Context/TestContext` per-scenario state, injected by cucumber-picocontainer
-- `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
-- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints),
-  `TestDataBuilder` (payloads), `Utils` (request/response specs, properties reader, JSON helper)
+- `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty`, Cucumber HTML and Allure plugins
 - `src/test/java/Features/` Cucumber feature files (`PlaceApi.feature`)
-- `src/test/java/StepDefinition/StepDefinition` step definitions for the feature files
+- `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
+- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints; create endpoints also declare their id path)
+- `src/test/java/Specification/Specifications` Specification builder: `defaultRequestSpecification()` and `defaultResponseSpecification()`
+- `src/test/java/StepDefinition/CommonStepDefinition` steps shared by every feature (http call, status, response body)
+- `src/test/java/StepDefinition/PlaceApiStepDefinition` Place API steps
 - `src/test/java/StepDefinition/Hooks` tag-scoped setup (`@Before("@DeletePlace")` creates the place to delete) and
   an `@After` hook that deletes every place the scenario created
-- `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty`, Cucumber HTML and Allure plugins
+- `src/test/java/Utilities/` `ConfigReader` (properties reader), `ResponseUtils` (JSON helper)
 - `src/test/resources/allure.properties` Allure results folder (`target/allure-results`)
 - `src/test/resources/logback-test.xml` log format and outputs
 - Generated, never edit or commit: `target/`, `requestLogs.txt`, `.allure/` (Allure tool downloaded by `allure:serve`)
@@ -58,7 +61,7 @@ and pull request.
 
 - Methods and variables camelCase; constants and enum constants UPPER_SNAKE_CASE; properties keys
   dot-separated lowercase (`api.base.uri`); packages keep the existing PascalCase style.
-- Settings only in `Global.properties`, read with `Utils.getPropertiesValue`; endpoints only in `GlobalEnum`.
+- Settings only in `Global.properties`, read with `ConfigReader.getPropertiesValue`; endpoints only in `GlobalEnum`.
 - Every request starts from `given().spec(defaultRequestSpecification())`; every response is checked with
   `.then().spec(defaultResponseSpecification())` (JSON content only; status codes are checked in the steps).
 - Verify only through `Assertions` (`assertEquals`, `assertHttpStatus` and its shortcuts), expected before actual,
@@ -77,8 +80,8 @@ and pull request.
   when scenarios fail**. Always check the test results or the Cucumber report, not just the build status.
 - Cucumber links steps by exact text: changing a word in the feature (`succeed` → `succeeds`) without changing the
   annotation turns the step **undefined**.
-- The HTTP-call step accepts any REST Assured `Method` (case-insensitive) and throws `IllegalArgumentException`
-  for anything else.
+- The HTTP-call step (in `CommonStepDefinition`) accepts any REST Assured `Method` (case-insensitive) and throws
+  `IllegalArgumentException` for anything else.
 - A failing `@Before` hook marks the scenario failed and skips all its steps; check the hook's log lines first.
 - Step and hook classes get `TestContext` through their constructor; creating one with `new` gives a separate,
   empty context, and later steps see `null`.
@@ -89,8 +92,9 @@ and pull request.
 - `getJsonPath` returns `null` for a missing JSON path (and logs a warning); a `null` in an assertion usually
   means a wrong path or an error response.
 - `getPropertiesValue` returns `null` for a missing key (and logs a warning); check the key's spelling and case first.
-- Every place created in a scenario must be registered with `testContext.addCreatedPlaceId(...)`, or the `@After`
-  hook can't clean it up. The When step and the Delete setup hook already do this.
+- Created resources are cleaned up only if they are registered. `ApiClient` registers them automatically when the
+  endpoint declares its id path in `GlobalEnum` (`ADD_PLACE(…, "place_id")`); a new create endpoint without an id
+  path is never cleaned up. Setup hooks that call an `Api` class directly register with `testContext.addCreatedId(...)`.
 - Cleanup log lines (`Cleanup: …`) appear after the last step; a `WARN | Cleanup: could not delete place` line
   means a place may have been left on the live API.
 - Reports are written only when `TestRunner` (or `mvn test`) runs; the green arrow in a `.feature` file ignores
@@ -127,3 +131,11 @@ Add one line per decision so future sessions keep it.
   `@After` hook deletes them after every scenario. Cleanup never fails a scenario (200/404 info, anything else warns).
 - 2026-11-07: Reporting uses Allure (2.x line, via `allure-bom`) with the `AllureRestAssured` filter on the shared
   request spec, plus Cucumber's single-file HTML report; the masterthought plugin and the JSON output are removed.
+- 2026-11-09: Single-responsibility refactor: Utils split into `Specification/Specifications` (request/response specs),
+  `Utilities/ConfigReader` (settings) and `Utilities/ResponseUtils` (JSON reading); helpers are final classes with static
+  methods, used via static imports, never extended; TestDataBuilder → `ApiDataBuilder/PlaceApiDataBuilder` and
+  StepDefinition → `PlaceApiStepDefinition`, one data builder and one step class per API.
+- 2026-11-09: Branches are named `<type>/<short-name>` with type `feature`, `refactor`, `fix` or `chore`; one topic per branch.
+- 2026-11-10: Create endpoints declare the JSON path of the new id in `GlobalEnum`; `ApiClient` registers created ids per endpoint in `TestContext` for cleanup,
+  so shared code has no resource-specific conditions and features stay unchanged.
+- 2026-11-10: Generic steps live in `CommonStepDefinition`; requests from steps go through `ApiClient`; step classes never call each other's step methods.

@@ -54,7 +54,7 @@ public class PlaceApiStepDefinition {
 	/**
 	 * Send the prepared request to the given endpoint and check the response against the shared JSON response spec.
 	 * Also called by other steps, e.g. to fetch a created place with GET.
-	 * After an ADD_PLACE call, registers the new place_id in TestContext for the cleanup hook.
+	 * If the endpoint declares a created-id path in GlobalEnum (e.g. ADD_PLACE), registers the new id in TestContext for cleanup.
 	 *
 	 * @param apiEndPoint endpoint name from GlobalEnum, e.g. "ADD_PLACE"
 	 * @param method      HTTP method name, case-insensitive, e.g. "POST", "GET", "DELETE"
@@ -83,11 +83,12 @@ public class PlaceApiStepDefinition {
 		                               .response();
 		testContext.setResponse(response);
 
-		// Register new places as soon as they exist, so cleanup deletes them even if a later step fails
-		if (endpoint == GlobalEnum.ADD_PLACE) {
-			String createdPlaceId = getJsonPath(response, "place_id");
-			if (createdPlaceId != null) {
-				testContext.addCreatedPlaceId(createdPlaceId);
+		// Register created resources as soon as they exist, so cleanup deletes them even if a later step fails
+		String idPath = endpoint.getCreatedIdPath();
+		if (idPath != null) {
+			String createdId = getJsonPath(response, idPath);
+			if (createdId != null) {
+				testContext.addCreatedId(endpoint, createdId);
 			}
 		}
 	}
@@ -108,7 +109,7 @@ public class PlaceApiStepDefinition {
 	 */
 	@Then("the place created maps to {string} using {string}")
 	public void thePlaceCreatedMapsToUsing(String name, String apiEndPoint) throws IOException {
-		testContext.setPlaceId(getJsonPath(testContext.getResponse(), "place_id"));
+		testContext.setPlaceId(getJsonPath(testContext.getResponse(), GlobalEnum.ADD_PLACE.getCreatedIdPath()));
 
 		logInformation("Add place_id to the request specification for the next API call");
 		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())

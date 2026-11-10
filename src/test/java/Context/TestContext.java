@@ -1,11 +1,14 @@
 package Context;
 
+import Resources.GlobalEnum;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 import static Logger.Log.logInformation;
 
@@ -19,7 +22,7 @@ public class TestContext {
 	private RequestSpecification requestSpecification;
 	private Response response;
 	private String placeId;
-	private final List<String> createdPlaceIds = new ArrayList<>();
+	private final Map<GlobalEnum, List<String>> createdIds = new EnumMap<>(GlobalEnum.class);
 
 	/**
 	 * @return the request being prepared for the next API call
@@ -64,19 +67,22 @@ public class TestContext {
 	}
 
 	/**
-	 * Remember a place created in this scenario, so the cleanup hook deletes it after the scenario.
+	 * Remember an id created by the given endpoint in this scenario, so cleanup deletes it.
 	 *
-	 * @param placeId place_id returned by the Add Place API
+	 * @param endpoint the API endpoint for which to track the created ID
+	 * @param id       id of the created resource
 	 */
-	public void addCreatedPlaceId(String placeId) {
-		logInformation("Track place " + placeId + " for cleanup");
-		createdPlaceIds.add(placeId);
+	public void addCreatedId(GlobalEnum endpoint, String id) {
+		logInformation("Track " + endpoint + " id " + id + " for cleanup");
+		createdIds.computeIfAbsent(endpoint, k -> new ArrayList<>())
+		          .add(id);
 	}
 
 	/**
-	 * @return place_ids created in this scenario, in creation order (read-only)
+	 * @param endpoint the create endpoint, e.g. ADD_PLACE
+	 * @return ids created by that endpoint in this scenario, in creation order; empty if none (read-only)
 	 */
-	public List<String> getCreatedPlaceIds() {
-		return Collections.unmodifiableList(createdPlaceIds);
+	public List<String> getCreatedIds(GlobalEnum endpoint) {
+		return Collections.unmodifiableList(createdIds.getOrDefault(endpoint, Collections.emptyList()));
 	}
 }

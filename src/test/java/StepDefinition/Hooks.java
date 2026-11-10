@@ -3,6 +3,7 @@ package StepDefinition;
 import Api.PlaceApi;
 import ApiDataBuilder.PlaceApiDataBuilder;
 import Context.TestContext;
+import Resources.GlobalEnum;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.restassured.response.Response;
@@ -52,10 +53,10 @@ public class Hooks {
 		PlaceApiDataBuilder placeApiDataBuilder = new PlaceApiDataBuilder();
 
 		Response response = placeApi.addPlace(placeApiDataBuilder.defaultAddPlacePayload());
-		String placeId = getJsonPath(response, "place_id");
+		String placeId = getJsonPath(response, GlobalEnum.ADD_PLACE.getCreatedIdPath());
 		if (placeId != null) {
 			// Track before the status check, so the place is cleaned up even if the check fails
-			testContext.addCreatedPlaceId(placeId);
+			testContext.addCreatedId(GlobalEnum.ADD_PLACE, placeId);
 		}
 		assertHttpOk(response);
 		testContext.setPlaceId(placeId);
@@ -67,7 +68,7 @@ public class Hooks {
 	 */
 	@After
 	public void cleanUpCreatedPlaces() {
-		List<String> placeIds = testContext.getCreatedPlaceIds();
+		List<String> placeIds = testContext.getCreatedIds(GlobalEnum.ADD_PLACE);
 		if (placeIds.isEmpty()) {
 			return;
 		}

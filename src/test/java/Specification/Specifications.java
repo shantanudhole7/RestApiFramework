@@ -18,8 +18,9 @@ import static Logger.Log.logInformation;
 import static Utilities.ConfigReader.getPropertiesValue;
 
 /**
- * Shared request and response specifications for the Place API calls.
- * Built once per run and reused for every call, so all requests and responses are logged to the same file.
+ * Shared request and response specifications.
+ * Each spec is built once per run and reused. The default spec logs every request and response to
+ * requestLogs.txt and Allure; the login spec logs nothing, because it carries credentials.
  */
 public final class Specifications {
 
@@ -31,6 +32,9 @@ public final class Specifications {
 
 	/** Response specification shared by every API call; built on first use, then reused for the whole run. */
 	private static ResponseSpecification responseSpecification;
+
+	/** Request specification without logging or report filters, for requests that carry credentials. */
+	private static RequestSpecification loginRequestSpecification;
 
 	private Specifications() {
 		// Prevent instantiation of this utility class
@@ -80,4 +84,21 @@ public final class Specifications {
 		return responseSpecification;
 	}
 
+	/**
+	 * Build a request specification for requests that carry credentials, such as login: base URI and JSON content
+	 * type only, with no logging and no Allure filter, so passwords and tokens never reach a log file or a report.
+	 * Built once per run and reused.
+	 *
+	 * @return the login RequestSpecification (no logging, no report filters)
+	 * @throws IOException if Global.properties cannot be read
+	 */
+	public static RequestSpecification loginRequestSpecification() throws IOException {
+		if (loginRequestSpecification == null) {
+			loginRequestSpecification = new RequestSpecBuilder()
+					.setBaseUri(getPropertiesValue("api.base.uri"))
+					.setContentType(ContentType.JSON)
+					.build();
+		}
+		return loginRequestSpecification;
+	}
 }

@@ -23,6 +23,7 @@ public class TestContext {
 	private Response response;
 	private String placeId;
 	private final Map<GlobalEnum, List<String>> createdIds = new EnumMap<>(GlobalEnum.class);
+	private AuthSession authSession;
 
 	/**
 	 * @return the request being prepared for the next API call
@@ -84,5 +85,15 @@ public class TestContext {
 	 */
 	public List<String> getCreatedIds(GlobalEnum endpoint) {
 		return Collections.unmodifiableList(createdIds.getOrDefault(endpoint, Collections.emptyList()));
+	}
+
+	/** @return the logged-in session, set by the "the user is logged in" step */
+	public AuthSession getAuthSession() {
+		return authSession;
+	}
+
+	/** @param authSession the logged-in session for this scenario's requests */
+	public void setAuthSession(AuthSession authSession) {
+		this.authSession = authSession;
 	}
 }

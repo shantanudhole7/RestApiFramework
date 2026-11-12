@@ -23,7 +23,7 @@ public class ProductApi {
 	/**
 	 * Build a Create Product request: the product's fields and image as multipart form data, plus the token.
 	 * Steps store it, and the generic http request step sends it through ApiClient, which registers the new product
-	 * for cleanup
+	 * for cleanup.
 	 *
 	 * @param product the product data, built by ProductApiDataBuilder
 	 * @param session the logged-in session
@@ -63,5 +63,20 @@ public class ProductApi {
 		              .spec(defaultResponseSpecification())
 		              .extract()
 		              .response();
+	}
+
+	/**
+	 * Build a Get Product request for one product, with the session's token. Sent by the generic http request step.
+	 *
+	 * @param productId id of the product to fetch, as returned by the Create Product API
+	 * @param session   the logged-in session
+	 * @return the prepared request, not yet sent
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public RequestSpecification getProductRequest(String productId, AuthSession session) throws IOException {
+		logInformation("Build Get Product request for product " + productId);
+		return given().spec(ecomRequestSpecification())
+		              .header(AUTHORIZATION_HEADER, session.getToken())
+		              .pathParam("productId", productId);
 	}
 }

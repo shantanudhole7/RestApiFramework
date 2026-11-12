@@ -16,7 +16,8 @@ public enum GlobalEnum {
 	// E-commerce API
 	LOGIN("/api/ecom/auth/login"),
 	CREATE_PRODUCT("/api/ecom/product/add-product", "productId"),
-	DELETE_PRODUCT("/api/ecom/product/delete-product/{productId}");
+	DELETE_PRODUCT("/api/ecom/product/delete-product/{productId}"),
+	GET_PRODUCT("/api/ecom/product/get-product-detail/{productId}");
 
 	private final String resource;
 	private final String createdIdPath;

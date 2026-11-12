@@ -14,7 +14,8 @@ public enum GlobalEnum {
 	GET_PLACE("/maps/api/place/get/json"),
 	DELETE_PLACE("/maps/api/place/delete/json"),
 	// E-commerce API
-	LOGIN("/api/ecom/auth/login");
+	LOGIN("/api/ecom/auth/login"),
+	CREATE_PRODUCT("/api/ecom/product/add-product", "productId");
 
 	private final String resource;
 	private final String createdIdPath;

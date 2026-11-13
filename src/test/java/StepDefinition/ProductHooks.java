@@ -14,6 +14,7 @@ import io.restassured.response.Response;
 import java.io.IOException;
 import java.util.List;
 
+import static Api.ProductApi.PRODUCT_NOT_FOUND_MESSAGE;
 import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
@@ -22,11 +23,8 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
 
-/** Cucumber hooks for products: delete every product a scenario created. */
+/** Cucumber hooks for products: create a product for each Delete scenario, and delete every product a scenario created. */
 public class ProductHooks {
-
-	/** This API answers 400 with this message for a missing product, not 404 (spelled "foundd" on delete). */
-	private static final String PRODUCT_NOT_FOUND_MESSAGE = "Product not found";
 
 	private final TestContext testContext;
 
@@ -61,8 +59,8 @@ public class ProductHooks {
 				} else if (isProductNotFound(response)) {
 					logInformation("Cleanup: product " + productId + " was already deleted");
 				} else {
-					logWarning(
-							"Cleanup: could not delete product " + productId + " | Status: " + statusCode + " | Body: " + response.asString());
+					String details = " | Status: " + statusCode + " | Body: " + response.asString();
+					logWarning("Cleanup: could not delete product " + productId + details);
 				}
 			} catch (Exception | AssertionError e) {
 				// AssertionError too: the shared response spec throws it for a non-JSON response
@@ -85,7 +83,7 @@ public class ProductHooks {
 	 * Create a product before each Delete Product scenario and keep its productId, so every Delete scenario
 	 * deletes a product of its own. Hooks run before the Background, so the hook gets the session itself.
 	 *
-	 * @throws IOException if Global.properties or secrets.properties cannot be read
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
 	@Before("@DeleteProduct")
 	public void createProductForDelete() throws IOException {

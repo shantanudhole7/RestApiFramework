@@ -15,8 +15,10 @@ import java.io.IOException;
 
 import static Assertion.Assertions.assertEquals;
 import static Assertion.Assertions.assertHttpOk;
+import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logInformation;
 import static Utilities.ResponseUtils.getJsonPath;
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 
 /** Step definitions for the Product API feature. */
 public class ProductApiStepDefinition {
@@ -69,13 +71,38 @@ public class ProductApiStepDefinition {
 		             getJsonPath(testContext.getResponse(), "data._id"));
 	}
 
+	/**
+	 * Build the Delete Product request for the productId set by the @DeleteProduct hook
+	 * (ProductHooks.createProductForDelete).
+	 *
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
 	@Given("Delete Product request for the created product")
-	public void deleteProductRequestForTheCreatedProduct() {
-		throw new io.cucumber.java.PendingException();
+	public void deleteProductRequestForTheCreatedProduct() throws IOException {
+		logInformation("Build Delete Product request for product " + testContext.getProductId());
+		testContext.setRequestSpecification(
+				new ProductApi().deleteProductRequest(testContext.getProductId(), testContext.getAuthSession()));
 	}
 
+	/**
+	 * Fetch the product deleted earlier in the scenario and verify the API reports it as not found.
+	 * This API answers 400 with "Product not found" for a missing product, not 404, so both are checked.
+	 *
+	 * @param apiEndPoint endpoint name from GlobalEnum used to fetch the product, e.g. "GET_PRODUCT"
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
 	@Then("the deleted product can no longer be fetched using {string}")
-	public void theDeletedProductCanNoLongerBeFetchedUsing(String apiEndPoint) {
-		throw new io.cucumber.java.PendingException();
+	public void theDeletedProductCanNoLongerBeFetchedUsing(String apiEndPoint) throws IOException {
+		logInformation("Get the deleted product " + testContext.getProductId() + " with " + apiEndPoint);
+		testContext.setRequestSpecification(
+				new ProductApi().getProductRequest(testContext.getProductId(), testContext.getAuthSession()));
+		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
+
+		logInformation("Verify the deleted product is not found");
+		assertHttpStatus(testContext.getResponse(), HTTP_BAD_REQUEST);
+
+		logInformation("Verify the product not found message");
+		assertEquals("Verify the product not found message", ProductApi.PRODUCT_NOT_FOUND_MESSAGE,
+		             getJsonPath(testContext.getResponse(), "message"));
 	}
 }

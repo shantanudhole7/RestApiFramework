@@ -20,6 +20,9 @@ import static io.restassured.RestAssured.given;
  */
 public class ProductApi {
 
+	/** This API answers 400 with this message for a missing product, not 404 (spelled "foundd" on delete). */
+	public static final String PRODUCT_NOT_FOUND_MESSAGE = "Product not found";
+
 	/**
 	 * Build a Create Product request: the product's fields and image as multipart form data, plus the token.
 	 * Steps store it, and the generic http request step sends it through ApiClient, which registers the new product
@@ -54,15 +57,12 @@ public class ProductApi {
 	 */
 	public Response deleteProduct(String productId, AuthSession session) throws IOException {
 		logInformation("Delete product " + productId + " with " + GlobalEnum.DELETE_PRODUCT);
-		return given().spec(ecomRequestSpecification())
-		              .header(AUTHORIZATION_HEADER, session.getToken())
-		              .pathParam("productId", productId)
-		              .when()
-		              .delete(GlobalEnum.DELETE_PRODUCT.getResource())
-		              .then()
-		              .spec(defaultResponseSpecification())
-		              .extract()
-		              .response();
+		return deleteProductRequest(productId, session).when()
+		                                               .delete(GlobalEnum.DELETE_PRODUCT.getResource())
+		                                               .then()
+		                                               .spec(defaultResponseSpecification())
+		                                               .extract()
+		                                               .response();
 	}
 
 	/**
@@ -96,5 +96,20 @@ public class ProductApi {
 		                                             .spec(defaultResponseSpecification())
 		                                             .extract()
 		                                             .response();
+	}
+
+	/**
+	 * Build a Delete Product request for one product, with the session's token.
+	 * Used by steps (which send it through the generic http request step) and by deleteProduct().
+	 *
+	 * @param productId id of the product to delete, as returned by the Create Product API
+	 * @param session   the logged-in session
+	 * @return the prepared request, not yet sent
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public RequestSpecification deleteProductRequest(String productId, AuthSession session) throws IOException {
+		return given().spec(ecomRequestSpecification())
+		              .header(AUTHORIZATION_HEADER, session.getToken())
+		              .pathParam("productId", productId);
 	}
 }

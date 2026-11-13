@@ -1,6 +1,6 @@
 @ProductApi
 Feature: Product API
-  Create products in the e-commerce store as a logged-in user.
+  Create and delete products in the e-commerce store as a logged-in user.
 
   Background:
     Given the user is logged in
@@ -16,3 +16,13 @@ Feature: Product API
     Examples:
       | Name           | Category | Sub Category | Description | Price | For |
       | Test Product 1 | fashion  | Shoes        | Sneaker     | 1999  | Men |
+
+
+  @DeleteProduct @Smoke
+  Scenario: Delete a product and verify the delete succeeds
+    # The @DeleteProduct hook creates the product to delete (ProductHooks.createProductForDelete)
+    Given Delete Product request for the created product
+    When User calls "DELETE_PRODUCT" with "DELETE" http request
+    Then the API call succeeds with status code 200
+    And "message" in response body is "Product Deleted Successfully"
+    And the deleted product can no longer be fetched using "GET_PRODUCT"

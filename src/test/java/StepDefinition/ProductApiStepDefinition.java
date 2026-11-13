@@ -68,4 +68,14 @@ public class ProductApiStepDefinition {
 		assertEquals("Verify that the fetched product id matches", productId,
 		             getJsonPath(testContext.getResponse(), "data._id"));
 	}
+
+	@Given("Delete Product request for the created product")
+	public void deleteProductRequestForTheCreatedProduct() {
+		throw new io.cucumber.java.PendingException();
+	}
+
+	@Then("the deleted product can no longer be fetched using {string}")
+	public void theDeletedProductCanNoLongerBeFetchedUsing(String apiEndPoint) {
+		throw new io.cucumber.java.PendingException();
+	}
 }

@@ -79,4 +79,22 @@ public class ProductApi {
 		              .header(AUTHORIZATION_HEADER, session.getToken())
 		              .pathParam("productId", productId);
 	}
+
+	/**
+	 * Create a product through the Create Product API.
+	 *
+	 * @param product the product data, built by ProductApiDataBuilder
+	 * @param session the logged-in session
+	 * @return response of the Create Product call; productId is in its body
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public Response createProduct(Product product, AuthSession session) throws IOException {
+		logInformation("Create product '" + product.getProductName() + "' with " + GlobalEnum.CREATE_PRODUCT);
+		return createProductRequest(product, session).when()
+		                                             .post(GlobalEnum.CREATE_PRODUCT.getResource())
+		                                             .then()
+		                                             .spec(defaultResponseSpecification())
+		                                             .extract()
+		                                             .response();
+	}
 }

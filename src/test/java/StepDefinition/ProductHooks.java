@@ -2,17 +2,24 @@ package StepDefinition;
 
 import Api.LoginApi;
 import Api.ProductApi;
+import ApiDataBuilder.ProductApiDataBuilder;
+import Context.AuthSession;
 import Context.TestContext;
+import Pojo.Product;
 import Resources.GlobalEnum;
 import io.cucumber.java.After;
+import io.cucumber.java.Before;
 import io.restassured.response.Response;
 
+import java.io.IOException;
 import java.util.List;
 
+import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
 import static Utilities.ResponseUtils.getJsonPath;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
 
 /** Cucumber hooks for products: delete every product a scenario created. */
@@ -54,8 +61,8 @@ public class ProductHooks {
 				} else if (isProductNotFound(response)) {
 					logInformation("Cleanup: product " + productId + " was already deleted");
 				} else {
-					logWarning("Cleanup: could not delete product " + productId + " | Status: " + statusCode
-							           + " | Body: " + response.asString());
+					logWarning(
+							"Cleanup: could not delete product " + productId + " | Status: " + statusCode + " | Body: " + response.asString());
 				}
 			} catch (Exception | AssertionError e) {
 				// AssertionError too: the shared response spec throws it for a non-JSON response
@@ -70,7 +77,30 @@ public class ProductHooks {
 	 */
 	private boolean isProductNotFound(Response response) {
 		String message = getJsonPath(response, "message");
-		return response.statusCode() == HTTP_BAD_REQUEST
-				&& message != null && message.startsWith(PRODUCT_NOT_FOUND_MESSAGE);
+		return response.statusCode() == HTTP_BAD_REQUEST && message != null && message.startsWith(
+				PRODUCT_NOT_FOUND_MESSAGE);
+	}
+
+	/**
+	 * Create a product before each Delete Product scenario and keep its productId, so every Delete scenario
+	 * deletes a product of its own. Hooks run before the Background, so the hook gets the session itself.
+	 *
+	 * @throws IOException if Global.properties or secrets.properties cannot be read
+	 */
+	@Before("@DeleteProduct")
+	public void createProductForDelete() throws IOException {
+		logInformation("Hook: create a product for the Delete Product scenario");
+		AuthSession session = LoginApi.session();
+		ProductApiDataBuilder productApiDataBuilder = new ProductApiDataBuilder();
+
+		Product product = productApiDataBuilder.defaultCreateProductPayload(session.getUserId());
+		Response response = new ProductApi().createProduct(product, session);
+		String productId = getJsonPath(response, GlobalEnum.CREATE_PRODUCT.getCreatedIdPath());
+		if (productId != null) {
+			// Track before the status check, so the product is cleaned up even if the check fails
+			testContext.addCreatedId(GlobalEnum.CREATE_PRODUCT, productId);
+		}
+		assertHttpStatus(response, HTTP_CREATED);
+		testContext.setProductId(productId);
 	}
 }

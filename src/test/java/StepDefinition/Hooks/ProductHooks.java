@@ -1,4 +1,4 @@
-package StepDefinition;
+package StepDefinition.Hooks;
 
 import Api.LoginApi;
 import Api.ProductApi;

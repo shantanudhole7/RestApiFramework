@@ -16,7 +16,7 @@ Feature: Place API
 
   @DeletePlace @Smoke
   Scenario: Delete a place and verify the delete succeeds
-    # The @DeletePlace hook creates the place to delete (Hooks.createPlaceForDelete)
+    # The @DeletePlace hook creates the place to delete (PlaceHooks.createPlaceForDelete)
     Given Delete Place payload for the created place
     When User calls "DELETE_PLACE" with "POST" http request
     Then the API call succeeds with status code 200

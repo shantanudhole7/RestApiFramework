@@ -1,4 +1,4 @@
-package StepDefinition;
+package StepDefinition.Hooks;
 
 import Api.PlaceApi;
 import ApiDataBuilder.PlaceApiDataBuilder;
@@ -19,10 +19,10 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 
 /**
- * Cucumber hooks: setup and cleanup that run around scenarios. Setup hooks are selected by tag;
- * the cleanup hook runs after every scenario.
+ * Cucumber hooks for places: create a place before each Delete Place scenario, and delete every place a scenario
+ * created.
  */
-public class Hooks {
+public class PlaceHooks {
 
 	private final TestContext testContext;
 
@@ -32,7 +32,7 @@ public class Hooks {
 	 *
 	 * @param testContext state shared by the steps and hooks of the current scenario
 	 */
-	public Hooks(TestContext testContext) {
+	public PlaceHooks(TestContext testContext) {
 		this.testContext = testContext;
 	}
 

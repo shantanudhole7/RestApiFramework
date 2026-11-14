@@ -73,7 +73,7 @@ public class PlaceApiStepDefinition {
 	}
 
 	/**
-	 * Build the Delete Place body for the place_id set by the @DeletePlace hook (Hooks.createPlaceForDelete).
+	 * Build the Delete Place body for the place_id set by the @DeletePlace hook (PlaceHooks.createPlaceForDelete).
 	 */
 	@Given("Delete Place payload for the created place")
 	public void deletePlacePayloadForTheCreatedPlace() throws IOException {

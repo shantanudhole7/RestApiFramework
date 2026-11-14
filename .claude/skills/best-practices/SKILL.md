@@ -14,25 +14,29 @@ this file in the same pull request when a rule changes.
 ```
 src/
 ├── main/java/
-│   └── Pojo/                                   # Request/response models (serialized by Jackson)
+│   └── Pojo/                                   # Request models: AddPlace, Location, Login, Product
 ├── test/java/
 │   ├── Api/                                    # API layer
 │   │   ├── ApiClient                           # sends step requests, registers created ids
-│   │   └── PlaceApi                            # endpoint calls for hooks
-│   ├── ApiDataBuilder/PlaceApiDataBuilder      # Test Data Builder: builds request payloads with defaults and overrides
+│   │   ├── LoginApi                            # logs in once per run, caches the session
+│   │   ├── PlaceApi                            # Place calls for hooks
+│   │   └── ProductApi                          # Product requests and calls, with the token
+│   ├── ApiDataBuilder/                         # Test Data Builders, one per API: Login, Place, Product
 │   ├── Assertion/Assertions                    # Logging assertions (PASS/FAIL lines)
 │   ├── cucumber/Options/
 │   │   └── TestRunner                          # JUnit runner: features path, glue, report plugins
-│   ├── Context/TestContext                     # Per-scenario state shared by steps and hooks
-│   ├── Features/                               # Cucumber feature files, one per API area (PlaceApi.feature)
+│   ├── Context/                                # TestContext (per-scenario state), AuthSession (run's session)
+│   ├── Features/                               # One feature file per API area (PlaceApi.feature, ProductApi.feature)
 │   ├── Logger/Log                              # The single shared logger
 │   ├── Resources/
 │   │   ├── Global.properties                   # Settings: base URI, API key
-│   │   └── GlobalEnum                          # API endpoint paths
-│   ├── Specification/Specifications            # Request/response specs
-│   ├── StepDefinition/                         # CommonStepDefinition (shared steps), PlaceApiStepDefinition, Hooks
-│   └── Utilities/                              # ConfigReader (settings), ResponseUtils (JSON path)
+│   │   ├── GlobalEnum                          # API endpoint paths
+│   │   └── secrets.properties.example          # Template for the git-ignored secrets.properties
+│   ├── Specification/Specifications            # Request/response specs: Place, login, e-commerce
+│   ├── StepDefinition/                         # Common, Login, PlaceApi and ProductApi steps; Hooks, ProductHooks
+│   └── Utilities/                              # ConfigReader (settings, secrets), ResponseUtils (JSON path)
 └── test/resources/
+    ├── files/product.jpeg                      # Placeholder image for Create Product
     ├── logback-test.xml                        # Log format and outputs
     └── allure.properties                       # Allure results folder (target/allure-results)
 ```
@@ -92,6 +96,9 @@ src/
 - A missing key returns `null` and logs a warning, so check spelling and case first when a value is `null`.
 - Real secrets (passwords, tokens, private keys) are never committed. The current `api.key` is the
   practice API's public demo key.
+- Credentials live in the git-ignored `Resources/secrets.properties` (template: the committed
+  `secrets.properties.example`). Read them only through `ConfigReader.getSecretValue("key")`, which fails fast with a
+  clear message if the file or key is missing. Never log a secret's value.
 
 ## 5. Endpoints
 
@@ -106,8 +113,13 @@ src/
 ## 6. Requests and responses
 
 - Every request starts from the shared spec: `given().spec(defaultRequestSpecification())`.
-- The request spec is built once per run with the base URI, API key, JSON content type, and request/response
-  logging to `requestLogs.txt` and the `AllureRestAssured` filter. Don't build a second spec or add these settings again per request.
+- Each spec is built once per run and reused. `defaultRequestSpecification()` (Place: API key, JSON, logging, Allure),
+  `ecomRequestSpecification()` (e-commerce: logging and Allure, no content type for multipart) and
+  `loginRequestSpecification()` (JSON only, no logging, because it carries credentials). Logged specs share one stream
+  to requestLogs.txt.
+- The e-commerce spec masks the `Authorization` header with two separate settings: a `RequestLoggingFilter` blacklist
+  for requestLogs.txt and a `LogConfig` blacklist for Allure. Send the header with `Specifications.AUTHORIZATION_HEADER`,
+  so the name you send is the name that gets masked.
 - Every response is checked against the shared response spec with
   `.then().spec(defaultResponseSpecification()).extract().response()`. It only expects JSON content;
   status codes are verified in the steps, so each scenario can expect its own code and the check is logged.
@@ -264,6 +276,16 @@ Feature: Place API
   not strings.
 - `ApiClient` is injected (PicoContainer), not static, because it uses the scenario's `TestContext`.
   Shared classes (`ApiClient`, `CommonStepDefinition`) contain no resource-specific conditions.
+- One hook class per API (`Hooks` for Place, `ProductHooks` for products). `@Before` hooks run before the `Background`,
+  so a setup hook that needs the e-commerce session gets it from `LoginApi.session()` itself.
+- `LoginApi` logs in once per run and keeps the immutable `AuthSession` in a static field: a deliberate exception to
+  "no static state", because the session is run-scoped and never changes. Scenario state stays in `TestContext`.
+- Facts about an API's contract that steps and hooks both need (e.g. `ProductApi.PRODUCT_NOT_FOUND_MESSAGE`) live in that
+  API's class, once. Status codes use the JDK's `java.net.HttpURLConnection` constants (`HTTP_OK`, `HTTP_CREATED`,
+  `HTTP_BAD_REQUEST`), never bare numbers.
+- `Api` classes may also return unsent requests (`createProductRequest`, `getProductRequest`, `deleteProductRequest`).
+  Steps store them, and the generic http step sends them through `ApiClient`, so created ids are registered for cleanup.
+  Methods that send for hooks reuse those builders instead of repeating them.
 
 ## 18. Reporting
 
@@ -293,3 +315,4 @@ Feature: Place API
 - [ ] Shared state through `TestContext` only: no `static` state, no `new PlaceApiStepDefinition()`
 - [ ] A new or changed rule is applied to existing code too: search for the old pattern and fix every match
 - [ ] After adding a tool or plugin, run it once and check `git status`: generated files go in `.gitignore`
+- [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt or the Allure results

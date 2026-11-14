@@ -5,21 +5,13 @@ import org.junit.Assert;
 
 import static Logger.Log.logError;
 import static Logger.Log.logInformation;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_OK;
 
 /**
  * Logging assertions: every check logs a PASS or FAIL line with expected and actual values.
  */
 public class Assertions {
-
-	/**
-	 * HTTP status for a successful request.
-	 */
-	private static final int HTTP_OK = 200;
-
-	/**
-	 * HTTP status for a resource that doesn't exist.
-	 */
-	private static final int HTTP_NOT_FOUND = 404;
 
 	/**
 	 * Assert that two values are equal, and log the result as a PASS or FAIL line.

@@ -1,7 +1,7 @@
 # CLAUDE.md — RestApiFramework
 
 REST API test automation framework built with Java, REST Assured, Cucumber and Maven, for the Rahul Shetty
-Academy Place API. Study project, committed step by step: each piece arrives through its own `feature/*`, `refactor/*`, `fix/*` or `chore/*` branch and pull request.
+Academy Place API and e-commerce (Product) API. Study project, committed step by step: each piece arrives through its own `feature/*`, `refactor/*`, `fix/*` or `chore/*` branch and pull request.
 
 - Coding standards: the `best-practices` skill (`.claude/skills/best-practices/SKILL.md`). Follow it for every
   POJO, utility, assertion, logger call, config value, endpoint, feature file or step definition.
@@ -36,25 +36,37 @@ Academy Place API. Study project, committed step by step: each piece arrives thr
 
 ## Layout
 
-- `src/main/java/Pojo/` request models (`AddPlace`, `Location`), serialized by Jackson
+- `src/main/java/Pojo/` request models: `AddPlace`, `Location`, `Login` (JSON, via Jackson), `Product` (multipart form fields)
 - `src/test/java/Api/PlaceApi` endpoint calls for hooks and setup (stateless, no assertions)
 - `src/test/java/Api/ApiClient` sends the scenario's prepared request, stores the response, registers created ids for cleanup
+- `src/test/java/Api/LoginApi` logs in to the e-commerce API once per run and caches the session
+- `src/test/java/Api/ProductApi` Product requests (create, get, delete) with the session's token
 - `src/test/java/ApiDataBuilder/PlaceApiDataBuilder` Test Data Builder: builds request payloads with defaults and overrides
+- `src/test/java/ApiDataBuilder/LoginApiDataBuilder`, `ProductApiDataBuilder` login and product payloads, one builder per API
 - `src/test/java/Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
   `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404)
 - `src/test/java/Context/TestContext` per-scenario state, injected by cucumber-picocontainer
+- `src/test/java/Context/AuthSession` immutable token and user id of the run's e-commerce session
 - `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty`, Cucumber HTML and Allure plugins
-- `src/test/java/Features/` Cucumber feature files (`PlaceApi.feature`)
+- `src/test/java/Features/` Cucumber feature files: `PlaceApi.feature`, `ProductApi.feature`
 - `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
-- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints; create endpoints also declare their id path)
-- `src/test/java/Specification/Specifications` Specification builder: `defaultRequestSpecification()` and `defaultResponseSpecification()`
+- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints; create endpoints also declare their id path),
+  `secrets.properties` (credentials, git-ignored; copy `secrets.properties.example`)
+- `src/test/java/Specification/Specifications` request specs `defaultRequestSpecification()` (Place),
+  `loginRequestSpecification()` (unlogged) and `ecomRequestSpecification()` (token masked), plus the response spec
+  `defaultResponseSpecification()`
 - `src/test/java/StepDefinition/CommonStepDefinition` steps shared by every feature (http call, status, response body)
+- `src/test/java/StepDefinition/LoginStepDefinition` the "the user is logged in" step
+- `src/test/java/StepDefinition/ProductApiStepDefinition` Product API steps
+- `src/test/java/StepDefinition/ProductHooks` `@Before("@DeleteProduct")` creates the product to delete; `@After` deletes
+  every product the scenario created
 - `src/test/java/StepDefinition/PlaceApiStepDefinition` Place API steps
 - `src/test/java/StepDefinition/Hooks` tag-scoped setup (`@Before("@DeletePlace")` creates the place to delete) and
   an `@After` hook that deletes every place the scenario created
-- `src/test/java/Utilities/` `ConfigReader` (properties reader), `ResponseUtils` (JSON helper)
+- `src/test/java/Utilities/` `ConfigReader` (settings and secrets), `ResponseUtils` (JSON helper)
 - `src/test/resources/allure.properties` Allure results folder (`target/allure-results`)
 - `src/test/resources/logback-test.xml` log format and outputs
+- `src/test/resources/files/product.jpeg` placeholder image uploaded by Create Product
 - Generated, never edit or commit: `target/`, `requestLogs.txt`, `.allure/` (Allure tool downloaded by `allure:serve`)
 
 ## Conventions (summary; the skill has the full detail)
@@ -100,6 +112,14 @@ Academy Place API. Study project, committed step by step: each piece arrives thr
 - Reports are written only when `TestRunner` (or `mvn test`) runs; the green arrow in a `.feature` file ignores
   `@CucumberOptions`, so no Allure or HTML report is produced.
 - `allure:serve` serves the report on the machine's network IP while it runs; stop it when done.
+- `@Before` hooks run before the `Background`: a setup hook that needs the e-commerce session gets it from
+  `LoginApi.session()` itself, because the "the user is logged in" step has not run yet.
+- The e-commerce API returns 201 for Create Product, and 400 with "Product not found" (not 404) for a missing product;
+  the delete endpoint spells it "Product not foundd". Steps check status and message; cleanup uses `startsWith`.
+- Masking the Authorization header needs two settings: the `RequestLoggingFilter` blacklist (requestLogs.txt) and the
+  `LogConfig` blacklist (Allure). Removing either one leaks the token into that output.
+- A missing `secrets.properties`, or a blank key in it, stops the run with a clear error; copy
+  `secrets.properties.example` and fill in a test account.
 
 ## Decisions log
 
@@ -139,3 +159,15 @@ Add one line per decision so future sessions keep it.
 - 2026-11-10: Create endpoints declare the JSON path of the new id in `GlobalEnum`; `ApiClient` registers created ids per endpoint in `TestContext` for cleanup,
   so shared code has no resource-specific conditions and features stay unchanged.
 - 2026-11-10: Generic steps live in `CommonStepDefinition`; requests from steps go through `ApiClient`; step classes never call each other's step methods.
+- 2026-11-14: E-commerce credentials live in the git-ignored `src/test/java/Resources/secrets.properties` (with a committed
+  `.example`), read only through `ConfigReader.getSecretValue`; never in `Global.properties`, code or logs.
+- 2026-11-14: `LoginApi` logs in once per run and caches an immutable `AuthSession` in a static field; a deliberate,
+  run-scoped exception to "no static state". Scenario state stays in `TestContext`. Its login response skips the
+  shared response spec on purpose, so a failed login reports its status and which secrets to check instead of a
+  content-type error.
+- 2026-11-14: Three request specs: default (Place), login (no logging, it carries credentials) and e-commerce (logged,
+  with the Authorization header masked by both a `RequestLoggingFilter` blacklist and a `LogConfig` blacklist).
+- 2026-11-14: One hook class per API (`ProductHooks`); facts about an API's contract (e.g. `PRODUCT_NOT_FOUND_MESSAGE`)
+  live in its Api class; status codes use the JDK's `HttpURLConnection` constants.
+- 2026-11-14: Tests assert the API's actual contract (Create Product 201; missing product 400 + "Product not found")
+  and document deviations from REST conventions in Gotchas.

@@ -1,6 +1,6 @@
 # RestApiFramework – REST Assured API Test Automation Framework
 
-API test automation framework for the [Rahul Shetty Academy](https://rahulshettyacademy.com) **Place API**,
+API test automation framework for the [Rahul Shetty Academy](https://rahulshettyacademy.com) **Place API** and **e-commerce (Product) API**,
 built with **Java**, **REST Assured**, **Cucumber** and **Maven**. Scenarios are written in Gherkin, requests are
 built from POJOs and a shared request specification, and every check is logged as PASS or FAIL.
 
@@ -31,35 +31,46 @@ RestApiFramework/
 ├── .github/CODEOWNERS                                  # Every pull request needs the code owner's review
 ├── src/
 │   ├── main/java/
-│   │   └── Pojo/                                       # Request models: AddPlace, Location
+│   │   └── Pojo/                                       # Request models: AddPlace, Location, Login, Product
 │   └── test/
 │       ├── java/
 │       │   ├── Api/
 │       │   │   ├── ApiClient.java                      # Sends requests from steps; registers created ids for cleanup
-│       │   │   └── PlaceApi.java                       # Endpoint calls for hooks and setup; returns the response
+│       │   │   ├── LoginApi.java                       # Logs in once per run and shares the session
+│       │   │   ├── PlaceApi.java                       # Place endpoint calls for hooks and setup
+│       │   │   └── ProductApi.java                     # Product requests (create, get, delete) with the token
 │       │   ├── ApiDataBuilder/
-│       │   │   └── PlaceApiDataBuilder.java            # Builds Add Place and Delete Place payloads
+│       │   │   ├── LoginApiDataBuilder.java            # Builds the login payload
+│       │   │   ├── PlaceApiDataBuilder.java            # Builds Add Place and Delete Place payloads
+│       │   │   └── ProductApiDataBuilder.java          # Builds Create Product data (custom or default)
 │       │   ├── Assertion/                              # Assertions: logging assertEquals and HTTP status checks (PASS/FAIL)
 │       │   ├── Context/
-│       │   │   └── TestContext.java                    # Per-scenario state: request, response, place_id
+│       │   │   ├── AuthSession.java                    # Immutable e-commerce session: token and user id
+│       │   │   └── TestContext.java                    # Per-scenario state: request, response, ids, created resources
 │       │   ├── cucumber/Options/
 │       │   │   └── TestRunner.java                     # JUnit runner: features path, glue, report plugins
 │       │   ├── Features/
-│       │   │   └── PlaceApi.feature                    # Place API scenarios
+│       │   │   ├── PlaceApi.feature                    # Place API scenarios
+│       │   │   └── ProductApi.feature                  # Product API scenarios (logged-in user)
 │       │   ├── Logger/                                 # Log: logInformation, logWarning, logError
 │       │   ├── Resources/
 │       │   │   ├── Global.properties                   # Settings: base URI, API key
-│       │   │   └── GlobalEnum.java                     # Endpoint paths: ADD_PLACE, GET_PLACE, DELETE_PLACE
+│       │   │   ├── GlobalEnum.java                     # Endpoint paths for the Place and e-commerce APIs
+│       │   │   └── secrets.properties.example          # Template for the git-ignored secrets.properties
 │       │   ├── Specification/
-│       │   │   └── Specifications.java                 # Request/response specs
+│       │   │   └── Specifications.java                 # Request/response specs: Place, login, e-commerce
 │       │   ├── StepDefinition/
 │       │   │   ├── CommonStepDefinition.java           # Steps shared by every feature
 │       │   │   ├── Hooks.java                          # Setup for @DeletePlace, and cleanup of created places
-│       │   │   └── PlaceApiStepDefinition.java         # Place API steps, plus the generic steps shared by every feature
+│       │   │   ├── LoginStepDefinition.java            # The "the user is logged in" step
+│       │   │   ├── PlaceApiStepDefinition.java         # Place API steps
+│       │   │   ├── ProductApiStepDefinition.java       # Product API steps
+│       │   │   └── ProductHooks.java                   # Setup for @DeleteProduct, and cleanup of created products
 │       │   └── Utilities/
-│       │       ├── ConfigReader.java                   # Reads configuration properties
+│       │       ├── ConfigReader.java                   # Reads settings and secrets
 │       │       └── ResponseUtils.java                  # Utility methods for handling API responses
 │       └── resources/
+│           ├── files/product.jpeg                      # Placeholder image uploaded by Create Product
 │           ├── logback-test.xml                        # Log format and outputs
 │           └── allure.properties                       # Allure results folder
 ├── CLAUDE.md                                           # Project context and rules for Claude Code
@@ -69,6 +80,7 @@ RestApiFramework/
 
 Generated and never committed: `target/` (build output, logs and reports), `requestLogs.txt` and `.allure/` (the
 Allure tool downloaded by `allure:serve`).
+Also never committed: `secrets.properties`, your local credentials.
 
 ---
 
@@ -96,7 +108,17 @@ api.key=qaclick123
 
 Write values without quotes. Keys are case-sensitive.
 
-**4. Build**
+**4. Create `src/test/java/Resources/secrets.properties`** (Product API only)
+
+Copy `secrets.properties.example` to `secrets.properties` in the same folder and fill in a test account for the
+e-commerce practice site. The file is git-ignored, so the credentials never reach the repository:
+
+```properties
+ecom.user.email=your-test-account@example.com
+ecom.user.password=your-password
+```
+
+**5. Build**
 
 ```bash
 mvn test-compile
@@ -117,7 +139,8 @@ Run from the project root. The scenarios call the live practice API.
 | By tag                | `mvn test -Dcucumber.filter.tags="@AddPlace"`                 |
 | One scenario          | Green arrow next to the scenario in the `.feature` file       |
 
-Tags: `@PlaceApi` (every Place API scenario), `@AddPlace`, `@DeletePlace`, `@Smoke`.
+Tags: `@PlaceApi` and `@ProductApi` (every scenario of that API), `@AddPlace`, `@DeletePlace`, `@CreateProduct`,
+`@DeleteProduct`, `@Smoke`.
 
 **Note:** `pom.xml` sets `testFailureIgnore = true`, so Maven reports **BUILD SUCCESS even when scenarios fail**.
 Always check the test results in the console (`pretty` output) or the report.
@@ -181,6 +204,17 @@ Response response = testContext.getRequestSpecification()
 The HTTP method comes from the feature text (`"POST"`, `"GET"`, case-insensitive) and is sent with REST Assured's
 `request(Method, path)`, so every method works without a branch per method. An unknown method fails with
 `Unsupported HTTP method`.
+
+`Specifications` has three request specs:
+
+| Spec                            | Used for    | What it adds                                                                           |
+|---------------------------------|-------------|----------------------------------------------------------------------------------------|
+| `defaultRequestSpecification()` | Place API   | API key, JSON, logging to `requestLogs.txt`, Allure                                    |
+| `ecomRequestSpecification()`    | Product API | Logging and Allure with the `Authorization` header masked; no content type (multipart) |
+| `loginRequestSpecification()`   | Login       | JSON only: no logging and no report, so credentials never reach a file                 |
+
+The token is masked by two settings, because each output reads its own: a `RequestLoggingFilter` blacklist for
+`requestLogs.txt` and a `LogConfig` blacklist for Allure.
 
 ### Request bodies
 
@@ -314,6 +348,34 @@ Each step maps to a method in `PlaceApiStepDefinition` by its exact text or, for
 Cucumber HTML report (see [Reports](#reports)).
 
 ---
+
+### Product API
+
+`ProductApi.feature` works as a logged-in user. Its `Background` step (`Given the user is logged in`) takes the session
+from `LoginApi`, which logs in once per run with the credentials from `secrets.properties` and shares the immutable
+`AuthSession` (token and user id) with every scenario.
+
+```gherkin
+  Background:
+    Given the user is logged in
+
+  @CreateProduct @Smoke
+  Scenario Outline: Create a product and verify it can be fetched
+    Given Create Product payload with "<Name>" "<Category>" "<Sub Category>" "<Description>" "<Price>" "<For>"
+    When User calls "CREATE_PRODUCT" with "POST" http request
+    Then the API call succeeds with status code 201
+    And "message" in response body is "Product Added Successfully"
+    And the product created can be fetched using "GET_PRODUCT"
+```
+
+- Create Product is a multipart request: the product's fields plus a placeholder image, with the session's token.
+  `ProductApi` builds it; the generic http step sends it through `ApiClient`, which registers the new `productId`
+  for cleanup because `CREATE_PRODUCT` declares it in `GlobalEnum`.
+- `@Before("@DeleteProduct")` in `ProductHooks` creates the product each Delete scenario deletes. Hooks run before the
+  `Background`, so the hook gets the session from `LoginApi` itself.
+- This API answers **201** for a created product, and **400** with `Product not found` (not 404) for a missing one;
+  on delete the message is spelled `Product not foundd`. The tests assert that actual contract, and product cleanup
+  treats it as "already deleted".
 
 ## Contributing
 

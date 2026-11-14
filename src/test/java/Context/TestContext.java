@@ -23,6 +23,8 @@ public class TestContext {
 	private Response response;
 	private String placeId;
 	private final Map<GlobalEnum, List<String>> createdIds = new EnumMap<>(GlobalEnum.class);
+	private AuthSession authSession;
+	private String productId;
 
 	/**
 	 * @return the request being prepared for the next API call
@@ -67,6 +69,20 @@ public class TestContext {
 	}
 
 	/**
+	 * @return productId of the product created for this scenario, or null if none was created
+	 */
+	public String getProductId() {
+		return productId;
+	}
+
+	/**
+	 * @param productId productId returned by the Create Product API
+	 */
+	public void setProductId(String productId) {
+		this.productId = productId;
+	}
+
+	/**
 	 * Remember an id created by the given endpoint in this scenario, so cleanup deletes it.
 	 *
 	 * @param endpoint the API endpoint for which to track the created ID
@@ -84,5 +100,15 @@ public class TestContext {
 	 */
 	public List<String> getCreatedIds(GlobalEnum endpoint) {
 		return Collections.unmodifiableList(createdIds.getOrDefault(endpoint, Collections.emptyList()));
+	}
+
+	/** @return the logged-in session, set by the "the user is logged in" step */
+	public AuthSession getAuthSession() {
+		return authSession;
+	}
+
+	/** @param authSession the logged-in session for this scenario's requests */
+	public void setAuthSession(AuthSession authSession) {
+		this.authSession = authSession;
 	}
 }

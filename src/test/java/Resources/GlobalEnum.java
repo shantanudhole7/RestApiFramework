@@ -1,7 +1,7 @@
 package Resources;
 
 /**
- * Endpoint paths of the Place API.
+ * Endpoint paths of the Place API and the e-commerce API.
  * Each path is appended to the base URI from Global.properties.
  * Feature files refer to these by constant name, e.g. "ADD_PLACE", which the steps
  * resolve with {@code GlobalEnum.valueOf(...)}.
@@ -12,7 +12,12 @@ public enum GlobalEnum {
 
 	ADD_PLACE("/maps/api/place/add/json", "place_id"),
 	GET_PLACE("/maps/api/place/get/json"),
-	DELETE_PLACE("/maps/api/place/delete/json");
+	DELETE_PLACE("/maps/api/place/delete/json"),
+	// E-commerce API
+	LOGIN("/api/ecom/auth/login"),
+	CREATE_PRODUCT("/api/ecom/product/add-product", "productId"),
+	DELETE_PRODUCT("/api/ecom/product/delete-product/{productId}"),
+	GET_PRODUCT("/api/ecom/product/get-product-detail/{productId}");
 
 	private final String resource;
 	private final String createdIdPath;

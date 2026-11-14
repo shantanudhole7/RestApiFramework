@@ -15,18 +15,14 @@ import static Assertion.Assertions.assertHttpOk;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
 import static Utilities.ResponseUtils.getJsonPath;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_OK;
 
 /**
  * Cucumber hooks: setup and cleanup that run around scenarios. Setup hooks are selected by tag;
  * the cleanup hook runs after every scenario.
  */
 public class Hooks {
-
-	/** Delete Place status when the place was deleted. */
-	private static final int HTTP_OK = 200;
-
-	/** Delete Place status when the place no longer exists. */
-	private static final int HTTP_NOT_FOUND = 404;
 
 	private final TestContext testContext;
 

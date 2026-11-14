@@ -160,7 +160,9 @@ Add one line per decision so future sessions keep it.
 - 2026-11-14: E-commerce credentials live in the git-ignored `src/test/java/Resources/secrets.properties` (with a committed
   `.example`), read only through `ConfigReader.getSecretValue`; never in `Global.properties`, code or logs.
 - 2026-11-14: `LoginApi` logs in once per run and caches an immutable `AuthSession` in a static field; a deliberate,
-  run-scoped exception to "no static state". Scenario state stays in `TestContext`.
+  run-scoped exception to "no static state". Scenario state stays in `TestContext`. 
+- Its login response skips the shared response spec on purpose, so a failed login reports its status and which
+  secrets to check instead of a content-type error.
 - 2026-11-14: Three request specs: default (Place), login (no logging, it carries credentials) and e-commerce (logged,
   with the Authorization header masked by both a `RequestLoggingFilter` blacklist and a `LogConfig` blacklist).
 - 2026-11-14: One hook class per API (`ProductHooks`); facts about an API's contract (e.g. `PRODUCT_NOT_FOUND_MESSAGE`)

@@ -13,15 +13,13 @@ import static Specification.Specifications.loginRequestSpecification;
 import static Utilities.ConfigReader.getSecretValue;
 import static Utilities.ResponseUtils.getJsonPath;
 import static io.restassured.RestAssured.given;
+import static java.net.HttpURLConnection.HTTP_OK;
 
 /**
  * Logs in to the e-commerce API once per run and shares the session (token and user id) with every scenario.
  * Credentials come from secrets.properties (git-ignored), read with ConfigReader.getSecretValue.
  */
 public final class LoginApi {
-
-	/** Login API status for a successful login. */
-	private static final int HTTP_OK = 200;
 
 	/** secrets.properties key holding the test user's email. */
 	private static final String USER_EMAIL_KEY = "ecom.user.email";

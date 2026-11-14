@@ -33,7 +33,8 @@ src/
 │   │   ├── GlobalEnum                          # API endpoint paths
 │   │   └── secrets.properties.example          # Template for the git-ignored secrets.properties
 │   ├── Specification/Specifications            # Request/response specs: Place, login, e-commerce
-│   ├── StepDefinition/                         # Common, Login, PlaceApi and ProductApi steps; Hooks, ProductHooks
+│   ├── StepDefinition/                         # Common, Login, PlaceApi and ProductApi steps
+│   │   └── Hooks/                              # PlaceHooks, ProductHooks: setup and cleanup, one class per API
 │   └── Utilities/                              # ConfigReader (settings, secrets), ResponseUtils (JSON path)
 └── test/resources/
     ├── files/product.jpeg                      # Placeholder image for Create Product
@@ -261,7 +262,7 @@ Feature: Place API
   instance per scenario and injects it into every step and hook class that takes it in its constructor.
 - Never share state through `static` fields, and never create glue classes with `new`: `new PlaceApiStepDefinition()`
   gets its own empty state, not the scenario's.
-- Hooks live in `StepDefinition/Hooks`. Setup hooks are scoped by tag (`@Before("@DeletePlace")`), because
+- Hooks live in `StepDefinition/Hooks/`, one class per API (`PlaceHooks`, `ProductHooks`). Setup hooks are scoped by tag (`@Before("@DeletePlace")`), because
   different scenarios need different data. Use them for setup the reader doesn't need to see; business setup the
   scenario is about stays a visible step.
 - Teardown is driven by resource tracking, not by tags: whoever creates a resource registers it at once (before any check that could fail):
@@ -278,8 +279,8 @@ Feature: Place API
   not strings.
 - `ApiClient` is injected (PicoContainer), not static, because it uses the scenario's `TestContext`.
   Shared classes (`ApiClient`, `CommonStepDefinition`) contain no resource-specific conditions.
-- One hook class per API (`Hooks` for Place, `ProductHooks` for products). `@Before` hooks run before the `Background`,
-  so a setup hook that needs the e-commerce session gets it from `LoginApi.session()` itself.
+- `@Before` hooks run before the `Background`, so a setup hook that needs the e-commerce session gets it from
+  `LoginApi.session()` itself.
 - `LoginApi` logs in once per run and keeps the immutable `AuthSession` in a static field: a deliberate exception to
   "no static state", because the session is run-scoped and never changes. Scenario state stays in `TestContext`.
 - Facts about an API's contract that steps and hooks both need (e.g. `ProductApi.PRODUCT_NOT_FOUND_MESSAGE`) live in that

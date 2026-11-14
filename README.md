@@ -60,12 +60,13 @@ RestApiFramework/
 │       │   ├── Specification/
 │       │   │   └── Specifications.java                 # Request/response specs: Place, login, e-commerce
 │       │   ├── StepDefinition/
+│       │   │   ├── Hooks/
+│       │   │   │   ├── PlaceHooks.java                 # Setup for @DeletePlace, and cleanup of created places
+│       │   │   │   └── ProductHooks.java               # Setup for @DeleteProduct, and cleanup of created products
 │       │   │   ├── CommonStepDefinition.java           # Steps shared by every feature
-│       │   │   ├── Hooks.java                          # Setup for @DeletePlace, and cleanup of created places
 │       │   │   ├── LoginStepDefinition.java            # The "the user is logged in" step
 │       │   │   ├── PlaceApiStepDefinition.java         # Place API steps
-│       │   │   ├── ProductApiStepDefinition.java       # Product API steps
-│       │   │   └── ProductHooks.java                   # Setup for @DeleteProduct, and cleanup of created products
+│       │   │   └── ProductApiStepDefinition.java       # Product API steps
 │       │   └── Utilities/
 │       │       ├── ConfigReader.java                   # Reads settings and secrets
 │       │       └── ResponseUtils.java                  # Utility methods for handling API responses
@@ -271,7 +272,7 @@ public PlaceApiStepDefinition(TestContext testContext, ApiClient apiClient) {
 }
 ```
 
-Hooks in `StepDefinition/Hooks.java` run setup selected by tag. Before every `@DeletePlace` scenario, a hook
+Hooks in `StepDefinition/Hooks/` (one class per API) run setup selected by tag. Before every `@DeletePlace` scenario, a hook
 creates a place and stores its `place_id`, so each Delete scenario deletes a place of its own and can run alone,
 in any order:
 
@@ -325,7 +326,7 @@ Feature: Place API
 
   @DeletePlace @Smoke
   Scenario: Delete a place and verify the delete succeeds
-    # The @DeletePlace hook creates the place to delete (Hooks.createPlaceForDelete)
+    # The @DeletePlace hook creates the place to delete (PlaceHooks.createPlaceForDelete)
     Given Delete Place payload for the created place
     When User calls "DELETE_PLACE" with "POST" http request
     Then the API call succeeds with status code 200

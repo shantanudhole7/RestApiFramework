@@ -55,14 +55,14 @@ Academy Place API and e-commerce (Product) API. Study project, committed step by
 - `src/test/java/Specification/Specifications` request specs `defaultRequestSpecification()` (Place),
   `loginRequestSpecification()` (unlogged) and `ecomRequestSpecification()` (token masked), plus the response spec
   `defaultResponseSpecification()`
+- `src/test/java/StepDefinition/Hooks/PlaceHooks` `@Before("@DeletePlace")` creates the place to delete; `@After`
+  deletes every place the scenario created
+- `src/test/java/StepDefinition/Hooks/ProductHooks` `@Before("@DeleteProduct")` creates the product to delete; `@After` deletes
+  every product the scenario created
 - `src/test/java/StepDefinition/CommonStepDefinition` steps shared by every feature (http call, status, response body)
 - `src/test/java/StepDefinition/LoginStepDefinition` the "the user is logged in" step
-- `src/test/java/StepDefinition/ProductApiStepDefinition` Product API steps
-- `src/test/java/StepDefinition/ProductHooks` `@Before("@DeleteProduct")` creates the product to delete; `@After` deletes
-  every product the scenario created
 - `src/test/java/StepDefinition/PlaceApiStepDefinition` Place API steps
-- `src/test/java/StepDefinition/Hooks` tag-scoped setup (`@Before("@DeletePlace")` creates the place to delete) and
-  an `@After` hook that deletes every place the scenario created
+- `src/test/java/StepDefinition/ProductApiStepDefinition` Product API steps
 - `src/test/java/Utilities/` `ConfigReader` (settings and secrets), `ResponseUtils` (JSON helper)
 - `src/test/resources/allure.properties` Allure results folder (`target/allure-results`)
 - `src/test/resources/logback-test.xml` log format and outputs
@@ -173,3 +173,5 @@ Add one line per decision so future sessions keep it.
   and document deviations from REST conventions in Gotchas.
 - 2026-11-14: `/test-review` reports clean files in one table and ends with a summary and a verdict ("Ready for PR" /
   "Fix before PR"); praise in reviews is always specific, never generic.
+- 2026-11-14: Hook classes live in `StepDefinition/Hooks/`, one per API (`PlaceHooks`, `ProductHooks`); a
+  `CommonHooks` class is added only when the first cross-cutting hook is needed.

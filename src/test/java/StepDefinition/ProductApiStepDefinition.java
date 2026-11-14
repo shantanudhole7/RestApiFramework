@@ -41,6 +41,7 @@ public class ProductApiStepDefinition {
 	@Given("Create Product payload with {string} {string} {string} {string} {string} {string}")
 	public void createProductPayloadWith(String name, String category, String subCategory, String description,
 	                                     String price, String productFor) throws IOException {
+		logInformation("Build Create Product request for '" + name + "'");
 		ProductApiDataBuilder productApiDataBuilder = new ProductApiDataBuilder();
 		AuthSession session = testContext.getAuthSession();
 		Product product = productApiDataBuilder.createProductPayload(name, category, subCategory, description, price,

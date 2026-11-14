@@ -48,11 +48,13 @@ Academy Place API and e-commerce (Product) API. Study project, committed step by
 - `src/test/java/Context/TestContext` per-scenario state, injected by cucumber-picocontainer
 - `src/test/java/Context/AuthSession` immutable token and user id of the run's e-commerce session
 - `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty`, Cucumber HTML and Allure plugins
-- `src/test/java/Features/` Cucumber feature files (`PlaceApi.feature`)
+- `src/test/java/Features/` Cucumber feature files: `PlaceApi.feature`, `ProductApi.feature`
 - `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
 - `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints; create endpoints also declare their id path),
   `secrets.properties` (credentials, git-ignored; copy `secrets.properties.example`)
-- `src/test/java/Specification/Specifications` Specification builder: `defaultRequestSpecification()` and `defaultResponseSpecification()`
+- `src/test/java/Specification/Specifications` request specs `defaultRequestSpecification()` (Place),
+  `loginRequestSpecification()` (unlogged) and `ecomRequestSpecification()` (token masked), plus the response spec
+  `defaultResponseSpecification()`
 - `src/test/java/StepDefinition/CommonStepDefinition` steps shared by every feature (http call, status, response body)
 - `src/test/java/StepDefinition/LoginStepDefinition` the "the user is logged in" step
 - `src/test/java/StepDefinition/ProductApiStepDefinition` Product API steps
@@ -160,9 +162,9 @@ Add one line per decision so future sessions keep it.
 - 2026-11-14: E-commerce credentials live in the git-ignored `src/test/java/Resources/secrets.properties` (with a committed
   `.example`), read only through `ConfigReader.getSecretValue`; never in `Global.properties`, code or logs.
 - 2026-11-14: `LoginApi` logs in once per run and caches an immutable `AuthSession` in a static field; a deliberate,
-  run-scoped exception to "no static state". Scenario state stays in `TestContext`. 
-- Its login response skips the shared response spec on purpose, so a failed login reports its status and which
-  secrets to check instead of a content-type error.
+  run-scoped exception to "no static state". Scenario state stays in `TestContext`. Its login response skips the
+  shared response spec on purpose, so a failed login reports its status and which secrets to check instead of a
+  content-type error.
 - 2026-11-14: Three request specs: default (Place), login (no logging, it carries credentials) and e-commerce (logged,
   with the Authorization header masked by both a `RequestLoggingFilter` blacklist and a `LogConfig` blacklist).
 - 2026-11-14: One hook class per API (`ProductHooks`); facts about an API's contract (e.g. `PRODUCT_NOT_FOUND_MESSAGE`)

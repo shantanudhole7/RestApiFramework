@@ -112,7 +112,8 @@ src/
 
 ## 6. Requests and responses
 
-- Every request starts from the shared spec: `given().spec(defaultRequestSpecification())`.
+- Every request starts from one of the shared specs (`defaultRequestSpecification()` for Place,
+  `ecomRequestSpecification()` for the e-commerce API, `loginRequestSpecification()` for login), never a new one.
 - Each spec is built once per run and reused. `defaultRequestSpecification()` (Place: API key, JSON, logging, Allure),
   `ecomRequestSpecification()` (e-commerce: logging and Allure, no content type for multipart) and
   `loginRequestSpecification()` (JSON only, no logging, because it carries credentials). Logged specs share one stream
@@ -266,8 +267,9 @@ Feature: Place API
 - Teardown is driven by resource tracking, not by tags: whoever creates a resource registers it at once (before any check that could fail):
   `ApiClient` for calls from steps, via the endpoint's id path, and setup hooks with `testContext.addCreatedId(endpoint, id)`.
   The untagged `@After` cleanup hook deletes every tracked resource after every scenario, passed or failed.
-- Cleanup never fails a scenario. 200 (deleted) and 404 (already gone) are logged as info; any other status or
-  exception is logged as a warning with the status and body.
+- Cleanup never fails a scenario. "Deleted" and "already gone" are logged as info (Place: 200 and 404; products: 200,
+  and 400 with "Product not found…", this API's not-found answer); any other status or exception is logged as a
+  warning with the status and body.
 - Hooks depend on `TestContext`, `Api` classes and `PlaceApiDataBuilder`, never on step classes. When a hook creates
   data a step uses, add a `#` comment in the scenario that names the hook.
 - A setup hook verifies its own call (`assertHttpOk`), so a failed setup fails in the hook and skips the steps.

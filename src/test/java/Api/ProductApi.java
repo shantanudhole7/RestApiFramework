@@ -34,7 +34,6 @@ public class ProductApi {
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
 	public RequestSpecification createProductRequest(Product product, AuthSession session) throws IOException {
-		logInformation("Build Create Product request for '" + product.getProductName() + "'");
 		return given().spec(ecomRequestSpecification())
 		              .header(AUTHORIZATION_HEADER, session.getToken())
 		              .multiPart("productName", product.getProductName())
@@ -74,10 +73,7 @@ public class ProductApi {
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
 	public RequestSpecification getProductRequest(String productId, AuthSession session) throws IOException {
-		logInformation("Build Get Product request for product " + productId);
-		return given().spec(ecomRequestSpecification())
-		              .header(AUTHORIZATION_HEADER, session.getToken())
-		              .pathParam("productId", productId);
+		return productRequest(productId, session);
 	}
 
 	/**
@@ -108,6 +104,19 @@ public class ProductApi {
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
 	public RequestSpecification deleteProductRequest(String productId, AuthSession session) throws IOException {
+		return productRequest(productId, session);
+	}
+
+	/**
+	 * Build a request for one product: the e-commerce spec, the session's token and the productId path parameter.
+	 * Shared by getProductRequest and deleteProductRequest, whose requests are built the same way.
+	 *
+	 * @param productId id of the product the request is about
+	 * @param session   the logged-in session
+	 * @return the prepared request, not yet sent
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	private RequestSpecification productRequest(String productId, AuthSession session) throws IOException {
 		return given().spec(ecomRequestSpecification())
 		              .header(AUTHORIZATION_HEADER, session.getToken())
 		              .pathParam("productId", productId);

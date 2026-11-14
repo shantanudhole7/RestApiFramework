@@ -171,3 +171,5 @@ Add one line per decision so future sessions keep it.
   live in its Api class; status codes use the JDK's `HttpURLConnection` constants.
 - 2026-11-14: Tests assert the API's actual contract (Create Product 201; missing product 400 + "Product not found")
   and document deviations from REST conventions in Gotchas.
+- 2026-11-14: `/test-review` reports clean files in one table and ends with a summary and a verdict ("Ready for PR" /
+  "Fix before PR"); praise in reviews is always specific, never generic.

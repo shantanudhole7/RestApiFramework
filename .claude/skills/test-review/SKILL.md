@@ -51,12 +51,14 @@ Never review generated or IDE files (`target/`, `.idea/`, `requestLogs.txt`).
 6. Report with exact line numbers, code quotes, and fixes.
 
 ## Output Format
-For each file, report in this exact order:
+Report in this order:
 
-1. **What's Good** — one or two lines acknowledging what's already correct (always include, even if brief).
-2. **Issues Found** — every single issue goes as ONE ROW in this table. Do NOT list issues as separate
-   prose blocks, dash-separated sections, or bullet points. The table is the only acceptable format for
-   issues — no exceptions, no free-text issue write-ups above or below it.
+### 1. Files with issues
+Most severe file first. For each file, in this exact order:
+
+1. **What's Good**: one or two lines on what is already correct.
+2. **Issues Found**: every issue is ONE ROW in this table. Do NOT list issues as prose blocks, dash-separated sections
+   or bullet points. The table is the only acceptable format for issues.
 
    | Severity | Line | Code | Issue | Best-practice rule | Fix |
    |----------|------|------|-------|--------------------|-----|
@@ -65,11 +67,24 @@ For each file, report in this exact order:
      `IMPORTANT` (breaks a best-practice rule), or `SUGGESTION` (readability or consistency).
    - **Code**: a short quote of the line.
    - **Best-practice rule**: the section number and name, e.g. `§16 Feature files and step definitions`.
-
-   If there are no issues, write "No issues found." instead of the table.
 3. **Score**: X/10
-4. **Recommended Fixes** — short priority-ordered list (CRITICAL first, then IMPORTANT, then SUGGESTION),
-   one line each, no re-explaining the issue — just the action.
+4. **Recommended Fixes**: a short priority-ordered list (CRITICAL first, then IMPORTANT, then SUGGESTION), one line
+   each, just the action.
+
+### 2. Clean files
+Every file with no issues goes in one table, never as a full block:
+
+| File | What's Good |
+|------|-------------|
+
+Each "What's Good" names something specific in that file, not a generic compliment.
+
+### 3. Summary
+- Files reviewed, files with issues, and issues by severity, e.g. "21 files, 2 with issues: 1 IMPORTANT, 1 SUGGESTION".
+- A one-line verdict: "Ready for PR" when there are no CRITICAL or IMPORTANT issues, otherwise "Fix before PR".
+- When there are no issues at all, say so plainly and name up to three specific things done well across the review,
+  e.g. "Clean: 21 files, no issues. Ready for PR. Notably: created ids registered before every status check; the token
+  masked in both outputs; every step logs before it checks."
 
 ## Rules
 - Every issue must reference which best-practice rule it violates.
@@ -80,3 +95,5 @@ For each file, report in this exact order:
 - Flag any real-looking personal data (names, phone numbers, emails, addresses) or secrets as CRITICAL,
   in code and in feature files: the repository is public.
 - Don't invent issues. If the code is good, say so.
+- Praise only what is specifically and verifiably good; never generic compliments, and never to soften a finding.
+- A clean result is reported as clean: no invented issues, and no padding.

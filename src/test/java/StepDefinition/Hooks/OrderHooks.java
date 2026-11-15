@@ -35,7 +35,8 @@ public class OrderHooks {
 	 * Delete every order created in the scenario, whether the scenario passed or failed.
 	 * Cleanup never fails the scenario: an order that can't be deleted is logged as a warning instead.
 	 */
-	@After
+	// Higher order runs first: delete orders before the products they reference
+	@After(order = 20000)
 	public void cleanUpCreatedOrders() {
 		List<String> orderIds = testContext.getCreatedIds(GlobalEnum.CREATE_ORDER);
 		if (orderIds.isEmpty()) {

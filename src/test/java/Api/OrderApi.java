@@ -1,7 +1,9 @@
 package Api;
 
 import Context.AuthSession;
+import Pojo.CreateOrder;
 import Resources.GlobalEnum;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 
@@ -47,7 +49,22 @@ public class OrderApi {
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
 	public RequestSpecification deleteOrderRequest(String orderId, AuthSession session) throws IOException {
-		return orderRequest(session).pathParams("orderId", orderId);
+		return orderRequest(session).pathParam("orderId", orderId);
+	}
+
+	/**
+	 * Build a Create Order request: the order as a JSON body, plus the token.
+	 * Steps store it, and the generic http request step sends it through ApiClient, which registers the new order
+	 * for cleanup.
+	 *
+	 * @param createOrder the order, built by OrderApiDataBuilder
+	 * @param session     the logged-in session
+	 * @return the prepared request, not yet sent
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public RequestSpecification createOrderRequest(CreateOrder createOrder, AuthSession session) throws IOException {
+		return orderRequest(session).contentType(ContentType.JSON)
+		                            .body(createOrder);
 	}
 
 	/**

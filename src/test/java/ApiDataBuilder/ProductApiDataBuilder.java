@@ -20,7 +20,7 @@ public class ProductApiDataBuilder {
 	private static final String DEFAULT_PRODUCT_SUB_CATEGORY = "T-Shirt";
 
 	/** Description of the default product. */
-	private static final String DEFAULT_PRODUCT_DESCRIPTION = "Setup product for a delete test";
+	private static final String DEFAULT_PRODUCT_DESCRIPTION = "Setup product for a test that needs one";
 
 	/** Price of the default product. */
 	private static final String DEFAULT_PRODUCT_PRICE = "499";

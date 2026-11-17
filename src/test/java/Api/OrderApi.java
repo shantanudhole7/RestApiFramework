@@ -18,7 +18,7 @@ import static io.restassured.RestAssured.given;
 /** Builds and sends Order API requests with the session's token; callers assert. */
 public class OrderApi {
 
-	/** This API answers 400 with this message for a missing order, not 404. */
+	/** This API answers 400 with this message for a missing order, not 404, on both fetch and delete. */
 	public static final String ORDER_NOT_FOUND_MESSAGE = "Order not found";
 
 	/**

@@ -16,8 +16,10 @@ import java.io.IOException;
 
 import static Assertion.Assertions.assertEquals;
 import static Assertion.Assertions.assertHttpOk;
+import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logInformation;
 import static Utilities.ResponseUtils.getJsonPath;
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 
 /** Step definitions for the Order API feature. */
 public class OrderApiStepDefinition {
@@ -76,13 +78,31 @@ public class OrderApiStepDefinition {
 		             getJsonPath(testContext.getResponse(), "data.productOrderedId"));
 	}
 
+	/**
+	 * Build the Delete Order request for the orderId set by the @DeleteOrder hook
+	 * (OrderHooks.createOrderForDelete).
+	 *
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
 	@Given("Delete Order request for the placed order")
-	public void deleteOrderRequestForThePlacedOrder() {
-		throw new io.cucumber.java.PendingException();
+	public void deleteOrderRequestForThePlacedOrder() throws IOException {
+		logInformation("Build Delete Order request for order " + testContext.getOrderId());
+		testContext.setRequestSpecification(
+				new OrderApi().deleteOrderRequest(testContext.getOrderId(), testContext.getAuthSession()));
 	}
 
 	@Then("the deleted order can no longer be fetched using {string}")
-	public void theDeletedOrderCanNoLongerBeFetchedUsing(String apiEndPoint) {
-		throw new io.cucumber.java.PendingException();
+	public void theDeletedOrderCanNoLongerBeFetchedUsing(String apiEndPoint) throws IOException {
+		logInformation("Get the deleted order " + testContext.getOrderId() + " with " + apiEndPoint);
+		testContext.setRequestSpecification(
+				new OrderApi().getOrderRequest(testContext.getOrderId(), testContext.getAuthSession()));
+		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
+
+		logInformation("Verify the deleted order is not found");
+		assertHttpStatus(testContext.getResponse(), HTTP_BAD_REQUEST);
+
+		logInformation("Verify the order not found message");
+		assertEquals("Verify the order not found message", OrderApi.ORDER_NOT_FOUND_MESSAGE,
+		             getJsonPath(testContext.getResponse(), "message"));
 	}
 }

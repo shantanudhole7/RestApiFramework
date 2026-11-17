@@ -90,4 +90,14 @@ public class OrderApiStepDefinition {
 		assertEquals("Verify that the fetched order contains the ordered product", testContext.getProductId(),
 		             getJsonPath(testContext.getResponse(), "data.productOrderedId"));
 	}
+
+	@Given("Delete Order request for the placed order")
+	public void deleteOrderRequestForThePlacedOrder() {
+		throw new io.cucumber.java.PendingException();
+	}
+
+	@Then("the deleted order can no longer be fetched using {string}")
+	public void theDeletedOrderCanNoLongerBeFetchedUsing(String apiEndPoint) {
+		throw new io.cucumber.java.PendingException();
+	}
 }

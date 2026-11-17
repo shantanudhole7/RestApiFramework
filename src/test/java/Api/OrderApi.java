@@ -68,6 +68,19 @@ public class OrderApi {
 	}
 
 	/**
+	 * Build a Get Order request for one order, with the session's token and the id query parameter.
+	 * Sent by the generic http request step.
+	 *
+	 * @param orderId id of the order to fetch, as returned by the Create Order API
+	 * @param session the logged-in session
+	 * @return the prepared request, not yet sent
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public RequestSpecification getOrderRequest(String orderId, AuthSession session) throws IOException {
+		return orderRequest(session).queryParam("id", orderId);
+	}
+
+	/**
 	 * Build the part every Order request shares: the e-commerce spec and the session's token.
 	 * Delete adds the orderId path parameter; Get adds the id query parameter.
 	 *

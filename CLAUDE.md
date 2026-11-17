@@ -1,7 +1,7 @@
 # CLAUDE.md — RestApiFramework
 
 REST API test automation framework built with Java, REST Assured, Cucumber and Maven, for the Rahul Shetty
-Academy Place API and e-commerce (Product) API. Study project, committed step by step: each piece arrives through its own `feature/*`, `refactor/*`, `fix/*` or `chore/*` branch and pull request.
+Academy Place API and e-commerce (Product and Order) API. Study project, committed step by step: each piece arrives through its own `feature/*`, `refactor/*`, `fix/*` or `chore/*` branch and pull request.
 
 - Coding standards: the `best-practices` skill (`.claude/skills/best-practices/SKILL.md`). Follow it for every
   POJO, utility, assertion, logger call, config value, endpoint, feature file or step definition.
@@ -118,6 +118,12 @@ Folders are described by what they hold; most hold one class per API, named afte
   `LogConfig` blacklist (Allure). Removing either one leaks the token into that output.
 - A missing `secrets.properties`, or a blank key in it, stops the run with a clear error; copy
   `secrets.properties.example` and fill in a test account.
+- The Order API returns 201 with the new id inside an array (`orders[0]`). It fetches by query parameter
+  (`get-orders-details?id=…`) and deletes by path (`delete-order/{orderId}`); a missing order is 400 with
+  "Order not found" on both.
+- Cleanup order matters: an order references its product, so `OrderHooks` cleanup runs first (`@After(order = 20000)`).
+  Two `@After` hooks with the default order run in no guaranteed order.
+- The IntelliJ console can cut off the end of a run; the complete log is the newest file in `target/logs/`.
 
 ## Decisions log
 
@@ -175,3 +181,10 @@ Add one line per decision so future sessions keep it.
   `CommonHooks` class is added only when the first cross-cutting hook is needed.
 - 2026-11-17: Project layouts (README, CLAUDE.md, the best-practices skill) describe folders and their naming pattern
   (`<Name>Api`, `<Name>Hooks`), not every file; only one-of-a-kind files are listed. A new API changes no layout.
+- 2026-11-17: Setup data that more than one hook or step needs is created by a class in `Setup/` (`ProductSetup`,
+  `OrderSetup`), injected by PicoContainer; it builds, sends, registers for cleanup, asserts and stores the id in
+  `TestContext`. Extracted at the third copy ("rule of three").
+- 2026-11-17: A precondition the scenario is about stays a visible step (`Given a product exists in the store`);
+  setup the reader doesn't need to see goes in a tagged hook (`@DeleteOrder`).
+- 2026-11-17: Dependent resources are cleaned up first: `@After(order = 20000)` deletes orders before the default
+  (10000) product cleanup.

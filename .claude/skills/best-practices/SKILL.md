@@ -266,7 +266,7 @@ Feature: Place API
   `ApiClient` for calls from steps, via the endpoint's id path, and setup hooks with `testContext.addCreatedId(endpoint, id)`.
   The untagged `@After` cleanup hook deletes every tracked resource after every scenario, passed or failed.
 - Cleanup never fails a scenario. "Deleted" and "already gone" are logged as info (Place: 200 and 404; products: 200,
-  and 400 with "Product not found…", this API's not-found answer); any other status or exception is logged as a
+  and 400 with "Product not found…"; orders: 200, and 400 with "Order not found"); any other status or exception is logged as a
   warning with the status and body.
 - Hooks depend on `TestContext`, `Api` classes and `PlaceApiDataBuilder`, never on step classes. When a hook creates
   data a step uses, add a `#` comment in the scenario that names the hook.
@@ -286,6 +286,11 @@ Feature: Place API
 - `Api` classes may also return unsent requests (`createProductRequest`, `getProductRequest`, `deleteProductRequest`).
   Steps store them, and the generic http step sends them through `ApiClient`, so created ids are registered for cleanup.
   Methods that send for hooks reuse those builders instead of repeating them.
+- Setup data that more than one hook or step needs is created by a `Setup/` class (`ProductSetup`, `OrderSetup`),
+  injected like `TestContext`. It builds, sends, registers the id for cleanup before asserting, and stores the id
+  in `TestContext`; callers pass the session and keep their own "why" log line.
+- When one resource references another (an order references a product), its cleanup hook runs first:
+  `@After(order = 20000)`. For `@After`, a higher order runs first.
 
 ## 18. Reporting
 
@@ -315,4 +320,5 @@ Feature: Place API
 - [ ] Shared state through `TestContext` only: no `static` state, no `new PlaceApiStepDefinition()`
 - [ ] A new or changed rule is applied to existing code too: search for the old pattern and fix every match
 - [ ] After adding a tool or plugin, run it once and check `git status`: generated files go in `.gitignore`
+- [ ] Every negative check can fail: a "no longer found" step fetches the id of the thing that was deleted
 - [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt or the Allure results

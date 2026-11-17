@@ -2,62 +2,47 @@ package StepDefinition;
 
 import Api.ApiClient;
 import Api.OrderApi;
-import Api.ProductApi;
 import ApiDataBuilder.OrderApiDataBuilder;
-import ApiDataBuilder.ProductApiDataBuilder;
 import Context.AuthSession;
 import Context.TestContext;
 import Pojo.CreateOrder;
-import Pojo.Product;
 import Resources.GlobalEnum;
+import Setup.ProductSetup;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.restassured.http.Method;
-import io.restassured.response.Response;
 
 import java.io.IOException;
 
 import static Assertion.Assertions.assertEquals;
 import static Assertion.Assertions.assertHttpOk;
-import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logInformation;
 import static Utilities.ResponseUtils.getJsonPath;
-import static java.net.HttpURLConnection.HTTP_CREATED;
 
 /** Step definitions for the Order API feature. */
 public class OrderApiStepDefinition {
 
 	private final TestContext testContext;
 	private final ApiClient apiClient;
+	private final ProductSetup productSetup;
 
 	/**
 	 * Cucumber injects the scenario's shared state (cucumber-picocontainer).
 	 *
-	 * @param testContext state shared by the steps and hooks of the current scenario
-	 * @param apiClient   client that sends prepared requests and checks the responses
+	 * @param testContext  state shared by the steps and hooks of the current scenario
+	 * @param apiClient    client that sends prepared requests and checks the responses
+	 * @param productSetup creates the product the order is placed for
 	 */
-	public OrderApiStepDefinition(TestContext testContext, ApiClient apiClient) {
+	public OrderApiStepDefinition(TestContext testContext, ApiClient apiClient, ProductSetup productSetup) {
 		this.testContext = testContext;
 		this.apiClient = apiClient;
+		this.productSetup = productSetup;
 	}
 
 	@Given("a product exists in the store")
 	public void aProductExistsInTheStore() throws IOException {
 		logInformation("Create a product for the order");
-		AuthSession session = testContext.getAuthSession();
-		ProductApiDataBuilder productApiDataBuilder = new ProductApiDataBuilder();
-
-		Product product = productApiDataBuilder.defaultCreateProductPayload(session.getUserId());
-		Response response = new ProductApi().createProduct(product, session);
-
-		String productId = getJsonPath(response, GlobalEnum.CREATE_PRODUCT.getCreatedIdPath());
-
-		if (productId != null) {
-			// Track before the status check, so the product is cleaned up even if the check fails
-			testContext.addCreatedId(GlobalEnum.CREATE_PRODUCT, productId);
-		}
-		assertHttpStatus(response, HTTP_CREATED);
-		testContext.setProductId(productId);
+		productSetup.createDefaultProduct(testContext.getAuthSession());
 	}
 
 	@Given("Place Order payload with country {string}")

@@ -2,11 +2,9 @@ package StepDefinition.Hooks;
 
 import Api.LoginApi;
 import Api.ProductApi;
-import ApiDataBuilder.ProductApiDataBuilder;
-import Context.AuthSession;
 import Context.TestContext;
-import Pojo.Product;
 import Resources.GlobalEnum;
+import Setup.ProductSetup;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.restassured.response.Response;
@@ -15,27 +13,28 @@ import java.io.IOException;
 import java.util.List;
 
 import static Api.ProductApi.PRODUCT_NOT_FOUND_MESSAGE;
-import static Assertion.Assertions.assertHttpStatus;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
 import static Utilities.ResponseUtils.getJsonPath;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
 
 /** Cucumber hooks for products: create a product for each Delete scenario, and delete every product a scenario created. */
 public class ProductHooks {
 
 	private final TestContext testContext;
+	private final ProductSetup productSetup;
 
 	/**
 	 * Cucumber injects the same TestContext the scenario's steps use (cucumber-picocontainer),
 	 * so it sees the products the scenario's steps created.
 	 *
-	 * @param testContext state shared by the steps and hooks of the current scenario
+	 * @param testContext  state shared by the steps and hooks of the current scenario
+	 * @param productSetup creates the product for each Delete scenario
 	 */
-	public ProductHooks(TestContext testContext) {
+	public ProductHooks(TestContext testContext, ProductSetup productSetup) {
 		this.testContext = testContext;
+		this.productSetup = productSetup;
 	}
 
 	/**
@@ -88,17 +87,6 @@ public class ProductHooks {
 	@Before("@DeleteProduct")
 	public void createProductForDelete() throws IOException {
 		logInformation("Hook: create a product for the Delete Product scenario");
-		AuthSession session = LoginApi.session();
-		ProductApiDataBuilder productApiDataBuilder = new ProductApiDataBuilder();
-
-		Product product = productApiDataBuilder.defaultCreateProductPayload(session.getUserId());
-		Response response = new ProductApi().createProduct(product, session);
-		String productId = getJsonPath(response, GlobalEnum.CREATE_PRODUCT.getCreatedIdPath());
-		if (productId != null) {
-			// Track before the status check, so the product is cleaned up even if the check fails
-			testContext.addCreatedId(GlobalEnum.CREATE_PRODUCT, productId);
-		}
-		assertHttpStatus(response, HTTP_CREATED);
-		testContext.setProductId(productId);
+		productSetup.createDefaultProduct(LoginApi.session());
 	}
 }

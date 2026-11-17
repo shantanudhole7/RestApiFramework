@@ -14,30 +14,27 @@ this file in the same pull request when a rule changes.
 ```
 src/
 ├── main/java/
-│   └── Pojo/                                   # Request models: AddPlace, Location, Login, Product
+│   └── Pojo/                                   # Request models (JSON via Jackson; Product is multipart)
 ├── test/java/
-│   ├── Api/                                    # API layer
-│   │   ├── ApiClient                           # sends step requests, registers created ids
-│   │   ├── LoginApi                            # logs in once per run, caches the session
-│   │   ├── PlaceApi                            # Place calls for hooks
-│   │   └── ProductApi                          # Product requests and calls, with the token
-│   ├── ApiDataBuilder/                         # Test Data Builders, one per API: Login, Place, Product
+│   ├── Api/                                    # One class per API (<Name>Api), plus ApiClient and LoginApi
+│   ├── ApiDataBuilder/                         # One Test Data Builder per API (<Name>ApiDataBuilder)
 │   ├── Assertion/Assertions                    # Logging assertions (PASS/FAIL lines)
 │   ├── cucumber/Options/
 │   │   └── TestRunner                          # JUnit runner: features path, glue, report plugins
 │   ├── Context/                                # TestContext (per-scenario state), AuthSession (run's session)
-│   ├── Features/                               # One feature file per API area (PlaceApi.feature, ProductApi.feature)
+│   ├── Features/                               # One feature file per API (<Name>Api.feature)
 │   ├── Logger/Log                              # The single shared logger
 │   ├── Resources/
 │   │   ├── Global.properties                   # Settings: base URI, API key
 │   │   ├── GlobalEnum                          # API endpoint paths
 │   │   └── secrets.properties.example          # Template for the git-ignored secrets.properties
+│   ├── Setup/                                  # Setup data shared by hooks and steps (<Name>Setup)
 │   ├── Specification/Specifications            # Request/response specs: Place, login, e-commerce
-│   ├── StepDefinition/                         # Common, Login, PlaceApi and ProductApi steps
-│   │   └── Hooks/                              # PlaceHooks, ProductHooks: setup and cleanup, one class per API
+│   ├── StepDefinition/                         # One step class per API (<Name>ApiStepDefinition), plus Common and Login
+│   │   └── Hooks/                              # One hook class per API (<Name>Hooks): setup and cleanup
 │   └── Utilities/                              # ConfigReader (settings, secrets), ResponseUtils (JSON path)
 └── test/resources/
-    ├── files/product.jpeg                      # Placeholder image for Create Product
+    ├── files/                                  # Test files (placeholder image for Create Product)
     ├── logback-test.xml                        # Log format and outputs
     └── allure.properties                       # Allure results folder (target/allure-results)
 ```

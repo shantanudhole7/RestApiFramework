@@ -25,6 +25,7 @@ public class TestContext {
 	private final Map<GlobalEnum, List<String>> createdIds = new EnumMap<>(GlobalEnum.class);
 	private AuthSession authSession;
 	private String productId;
+	private String orderId;
 
 	/**
 	 * @return the request being prepared for the next API call
@@ -80,6 +81,20 @@ public class TestContext {
 	 */
 	public void setProductId(String productId) {
 		this.productId = productId;
+	}
+
+	/**
+	 * @return orderId of the order created for this scenario, or null if none was created
+	 */
+	public String getOrderId() {
+		return orderId;
+	}
+
+	/**
+	 * @param orderId orderId returned by the Create Order API
+	 */
+	public void setOrderId(String orderId) {
+		this.orderId = orderId;
 	}
 
 	/**

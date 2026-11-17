@@ -2,11 +2,16 @@ package StepDefinition.Hooks;
 
 import Api.LoginApi;
 import Api.OrderApi;
+import Context.AuthSession;
 import Context.TestContext;
 import Resources.GlobalEnum;
+import Setup.OrderSetup;
+import Setup.ProductSetup;
 import io.cucumber.java.After;
+import io.cucumber.java.Before;
 import io.restassured.response.Response;
 
+import java.io.IOException;
 import java.util.List;
 
 import static Api.OrderApi.ORDER_NOT_FOUND_MESSAGE;
@@ -16,19 +21,28 @@ import static Utilities.ResponseUtils.getJsonPath;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_OK;
 
-/** Cucumber hooks for orders: delete every order a scenario created, before its products are deleted. */
+/**
+ * Cucumber hooks for orders: place an order for each Delete scenario, and delete every order a scenario created,
+ * before its products are deleted.
+ */
 public class OrderHooks {
 
 	private final TestContext testContext;
+	private final ProductSetup productSetup;
+	private final OrderSetup orderSetup;
 
 	/**
 	 * Cucumber injects the same TestContext the scenario's steps use (cucumber-picocontainer),
 	 * so it sees the orders the scenario's steps created.
 	 *
-	 * @param testContext state shared by the steps and hooks of the current scenario
+	 * @param testContext  state shared by the steps and hooks of the current scenario
+	 * @param productSetup creates the product each Delete scenario's order is placed for
+	 * @param orderSetup   places the order for each Delete scenario
 	 */
-	public OrderHooks(TestContext testContext) {
+	public OrderHooks(TestContext testContext, ProductSetup productSetup, OrderSetup orderSetup) {
 		this.testContext = testContext;
+		this.productSetup = productSetup;
+		this.orderSetup = orderSetup;
 	}
 
 	/**
@@ -72,5 +86,20 @@ public class OrderHooks {
 		String message = getJsonPath(response, "message");
 		return response.statusCode() == HTTP_BAD_REQUEST && message != null && message.startsWith(
 				ORDER_NOT_FOUND_MESSAGE);
+	}
+
+	/**
+	 * Place an order, with a product of its own, before each Delete Order scenario and keep its orderId,
+	 * so every Delete scenario deletes an order of its own. Hooks run before the Background,
+	 * so the hook gets the session itself.
+	 *
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	@Before("@DeleteOrder")
+	public void createOrderForDelete() throws IOException {
+		logInformation("Hook: place an order for the Delete Order scenario");
+		AuthSession session = LoginApi.session();
+		productSetup.createDefaultProduct(session);
+		orderSetup.placeDefaultOrder(session);
 	}
 }

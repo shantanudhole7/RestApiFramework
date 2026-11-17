@@ -81,6 +81,24 @@ public class OrderApi {
 	}
 
 	/**
+	 * Place an order through the Create Order API.
+	 *
+	 * @param createOrder the order, built by OrderApiDataBuilder
+	 * @param session     the logged-in session
+	 * @return response of the Create Order call; the order id is at orders[0] in its body
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public Response createOrder(CreateOrder createOrder, AuthSession session) throws IOException {
+		logInformation("Place an order with " + GlobalEnum.CREATE_ORDER);
+		return createOrderRequest(createOrder, session).when()
+		                                               .post(GlobalEnum.CREATE_ORDER.getResource())
+		                                               .then()
+		                                               .spec(defaultResponseSpecification())
+		                                               .extract()
+		                                               .response();
+	}
+
+	/**
 	 * Build the part every Order request shares: the e-commerce spec and the session's token.
 	 * Delete adds the orderId path parameter; Get adds the id query parameter.
 	 *

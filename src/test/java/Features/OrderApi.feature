@@ -19,11 +19,11 @@ Feature: Order API
       | Country |
       | India   |
 
-  @DeleteProduct @Smoke
-  Scenario: Delete a product and verify the delete succeeds
-    # The @DeleteProduct hook creates the product to delete (ProductHooks.createProductForDelete)
-    Given Delete Product request for the created product
-    When User calls "DELETE_PRODUCT" with "DELETE" http request
+  @DeleteOrder @Smoke
+  Scenario: Delete an order and verify the delete succeeds
+    # The @DeleteOrder hook places the order to delete (OrderHooks.createOrderForDelete)
+    Given Delete Order request for the placed order
+    When User calls "DELETE_ORDER" with "DELETE" http request
     Then the API call succeeds with status code 200
-    And "message" in response body is "Product Deleted Successfully"
-    And the deleted product can no longer be fetched using "GET_PRODUCT"
+    And "message" in response body is "Orders Deleted Successfully"
+    And the deleted order can no longer be fetched using "GET_ORDER"

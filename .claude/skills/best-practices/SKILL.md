@@ -14,30 +14,27 @@ this file in the same pull request when a rule changes.
 ```
 src/
 ├── main/java/
-│   └── Pojo/                                   # Request models: AddPlace, Location, Login, Product
+│   └── Pojo/                                   # Request models (JSON via Jackson; Product is multipart)
 ├── test/java/
-│   ├── Api/                                    # API layer
-│   │   ├── ApiClient                           # sends step requests, registers created ids
-│   │   ├── LoginApi                            # logs in once per run, caches the session
-│   │   ├── PlaceApi                            # Place calls for hooks
-│   │   └── ProductApi                          # Product requests and calls, with the token
-│   ├── ApiDataBuilder/                         # Test Data Builders, one per API: Login, Place, Product
+│   ├── Api/                                    # One class per API (<Name>Api), plus ApiClient and LoginApi
+│   ├── ApiDataBuilder/                         # One Test Data Builder per API (<Name>ApiDataBuilder)
 │   ├── Assertion/Assertions                    # Logging assertions (PASS/FAIL lines)
 │   ├── cucumber/Options/
 │   │   └── TestRunner                          # JUnit runner: features path, glue, report plugins
 │   ├── Context/                                # TestContext (per-scenario state), AuthSession (run's session)
-│   ├── Features/                               # One feature file per API area (PlaceApi.feature, ProductApi.feature)
+│   ├── Features/                               # One feature file per API (<Name>Api.feature)
 │   ├── Logger/Log                              # The single shared logger
 │   ├── Resources/
 │   │   ├── Global.properties                   # Settings: base URI, API key
 │   │   ├── GlobalEnum                          # API endpoint paths
 │   │   └── secrets.properties.example          # Template for the git-ignored secrets.properties
+│   ├── Setup/                                  # Setup data shared by hooks and steps (<Name>Setup)
 │   ├── Specification/Specifications            # Request/response specs: Place, login, e-commerce
-│   ├── StepDefinition/                         # Common, Login, PlaceApi and ProductApi steps
-│   │   └── Hooks/                              # PlaceHooks, ProductHooks: setup and cleanup, one class per API
+│   ├── StepDefinition/                         # One step class per API (<Name>ApiStepDefinition), plus Common and Login
+│   │   └── Hooks/                              # One hook class per API (<Name>Hooks): setup and cleanup
 │   └── Utilities/                              # ConfigReader (settings, secrets), ResponseUtils (JSON path)
 └── test/resources/
-    ├── files/product.jpeg                      # Placeholder image for Create Product
+    ├── files/                                  # Test files (placeholder image for Create Product)
     ├── logback-test.xml                        # Log format and outputs
     └── allure.properties                       # Allure results folder (target/allure-results)
 ```
@@ -269,9 +266,9 @@ Feature: Place API
   `ApiClient` for calls from steps, via the endpoint's id path, and setup hooks with `testContext.addCreatedId(endpoint, id)`.
   The untagged `@After` cleanup hook deletes every tracked resource after every scenario, passed or failed.
 - Cleanup never fails a scenario. "Deleted" and "already gone" are logged as info (Place: 200 and 404; products: 200,
-  and 400 with "Product not found…", this API's not-found answer); any other status or exception is logged as a
+  and 400 with "Product not found…"; orders: 200, and 400 with "Order not found"); any other status or exception is logged as a
   warning with the status and body.
-- Hooks depend on `TestContext`, `Api` classes and `PlaceApiDataBuilder`, never on step classes. When a hook creates
+- Hooks depend on `TestContext`, Api classes, data builders and Setup classes, never on step classes. When a hook creates
   data a step uses, add a `#` comment in the scenario that names the hook.
 - A setup hook verifies its own call (`assertHttpOk`), so a failed setup fails in the hook and skips the steps.
 - `Api` classes (`PlaceApi`) send one request each (`addPlace`, `deletePlace`) from the shared specs and return
@@ -289,6 +286,11 @@ Feature: Place API
 - `Api` classes may also return unsent requests (`createProductRequest`, `getProductRequest`, `deleteProductRequest`).
   Steps store them, and the generic http step sends them through `ApiClient`, so created ids are registered for cleanup.
   Methods that send for hooks reuse those builders instead of repeating them.
+- Setup data that more than one hook or step needs is created by a `Setup/` class (`ProductSetup`, `OrderSetup`),
+  injected like `TestContext`. It builds, sends, registers the id for cleanup before asserting, and stores the id
+  in `TestContext`; callers pass the session and keep their own "why" log line.
+- When one resource references another (an order references a product), its cleanup hook runs first:
+  `@After(order = 20000)`. For `@After`, a higher order runs first.
 
 ## 18. Reporting
 
@@ -318,4 +320,5 @@ Feature: Place API
 - [ ] Shared state through `TestContext` only: no `static` state, no `new PlaceApiStepDefinition()`
 - [ ] A new or changed rule is applied to existing code too: search for the old pattern and fix every match
 - [ ] After adding a tool or plugin, run it once and check `git status`: generated files go in `.gitignore`
+- [ ] Every negative check can fail: a "no longer found" step fetches the id of the thing that was deleted
 - [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt or the Allure results

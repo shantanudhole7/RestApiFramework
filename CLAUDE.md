@@ -1,7 +1,7 @@
 # CLAUDE.md — RestApiFramework
 
 REST API test automation framework built with Java, REST Assured, Cucumber and Maven, for the Rahul Shetty
-Academy Place API and e-commerce (Product) API. Study project, committed step by step: each piece arrives through its own `feature/*`, `refactor/*`, `fix/*` or `chore/*` branch and pull request.
+Academy Place API and e-commerce (Product and Order) API. Study project, committed step by step: each piece arrives through its own `feature/*`, `refactor/*`, `fix/*` or `chore/*` branch and pull request.
 
 - Coding standards: the `best-practices` skill (`.claude/skills/best-practices/SKILL.md`). Follow it for every
   POJO, utility, assertion, logger call, config value, endpoint, feature file or step definition.
@@ -36,37 +36,35 @@ Academy Place API and e-commerce (Product) API. Study project, committed step by
 
 ## Layout
 
-- `src/main/java/Pojo/` request models: `AddPlace`, `Location`, `Login` (JSON, via Jackson), `Product` (multipart form fields)
-- `src/test/java/Api/PlaceApi` endpoint calls for hooks and setup (stateless, no assertions)
-- `src/test/java/Api/ApiClient` sends the scenario's prepared request, stores the response, registers created ids for cleanup
-- `src/test/java/Api/LoginApi` logs in to the e-commerce API once per run and caches the session
-- `src/test/java/Api/ProductApi` Product requests (create, get, delete) with the session's token
-- `src/test/java/ApiDataBuilder/PlaceApiDataBuilder` Test Data Builder: builds request payloads with defaults and overrides
-- `src/test/java/ApiDataBuilder/LoginApiDataBuilder`, `ProductApiDataBuilder` login and product payloads, one builder per API
+Folders are described by what they hold; most hold one class per API, named after it (`Place`, `Product`, `Order`).
+
+- `src/main/java/Pojo/` request models: JSON via Jackson (snake_case keys mapped with `@JsonProperty`); `Product` is
+  sent as multipart form fields
+- `src/test/java/Api/` one class per API (`<Name>Api`): builds unsent requests for steps and sends calls for hooks,
+  with the session's token where needed; stateless, no assertions. Also `ApiClient` (sends the scenario's prepared
+  request, stores the response, registers created ids for cleanup) and `LoginApi` (logs in once per run, caches the session)
+- `src/test/java/ApiDataBuilder/` one Test Data Builder per API (`<Name>ApiDataBuilder`): payloads, custom or default
 - `src/test/java/Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
   `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404)
-- `src/test/java/Context/TestContext` per-scenario state, injected by cucumber-picocontainer
-- `src/test/java/Context/AuthSession` immutable token and user id of the run's e-commerce session
+- `src/test/java/Context/` `TestContext` (per-scenario state, injected by cucumber-picocontainer) and `AuthSession`
+  (immutable token and user id of the run's e-commerce session)
 - `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty`, Cucumber HTML and Allure plugins
-- `src/test/java/Features/` Cucumber feature files: `PlaceApi.feature`, `ProductApi.feature`
+- `src/test/java/Features/` one feature file per API (`<Name>Api.feature`)
 - `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
 - `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints; create endpoints also declare their id path),
   `secrets.properties` (credentials, git-ignored; copy `secrets.properties.example`)
+- `src/test/java/Setup/` one class per API (`<Name>Setup`): creates setup data that hooks and steps share (build, send,
+  register for cleanup, check, store the id in `TestContext`); injected like `TestContext`
 - `src/test/java/Specification/Specifications` request specs `defaultRequestSpecification()` (Place),
   `loginRequestSpecification()` (unlogged) and `ecomRequestSpecification()` (token masked), plus the response spec
   `defaultResponseSpecification()`
-- `src/test/java/StepDefinition/Hooks/PlaceHooks` `@Before("@DeletePlace")` creates the place to delete; `@After`
-  deletes every place the scenario created
-- `src/test/java/StepDefinition/Hooks/ProductHooks` `@Before("@DeleteProduct")` creates the product to delete; `@After` deletes
-  every product the scenario created
-- `src/test/java/StepDefinition/CommonStepDefinition` steps shared by every feature (http call, status, response body)
-- `src/test/java/StepDefinition/LoginStepDefinition` the "the user is logged in" step
-- `src/test/java/StepDefinition/PlaceApiStepDefinition` Place API steps
-- `src/test/java/StepDefinition/ProductApiStepDefinition` Product API steps
+- `src/test/java/StepDefinition/` one step class per API (`<Name>ApiStepDefinition`), plus `CommonStepDefinition`
+  (http call, status, response body) and `LoginStepDefinition` (the "the user is logged in" step)
+- `src/test/java/StepDefinition/Hooks/` one hook class per API (`<Name>Hooks`): `@Before("@Delete<Name>")` creates what
+  the Delete scenario deletes; `@After` deletes everything the scenario created
 - `src/test/java/Utilities/` `ConfigReader` (settings and secrets), `ResponseUtils` (JSON helper)
-- `src/test/resources/allure.properties` Allure results folder (`target/allure-results`)
-- `src/test/resources/logback-test.xml` log format and outputs
-- `src/test/resources/files/product.jpeg` placeholder image uploaded by Create Product
+- `src/test/resources/` `files/` (test files, e.g. the placeholder product image), `logback-test.xml` (log format and
+  outputs), `allure.properties` (Allure results folder, `target/allure-results`)
 - Generated, never edit or commit: `target/`, `requestLogs.txt`, `.allure/` (Allure tool downloaded by `allure:serve`)
 
 ## Conventions (summary; the skill has the full detail)
@@ -120,6 +118,12 @@ Academy Place API and e-commerce (Product) API. Study project, committed step by
   `LogConfig` blacklist (Allure). Removing either one leaks the token into that output.
 - A missing `secrets.properties`, or a blank key in it, stops the run with a clear error; copy
   `secrets.properties.example` and fill in a test account.
+- The Order API returns 201 with the new id inside an array (`orders[0]`). It fetches by query parameter
+  (`get-orders-details?id=…`) and deletes by path (`delete-order/{orderId}`); a missing order is 400 with
+  "Order not found" on both.
+- Cleanup order matters: an order references its product, so `OrderHooks` cleanup runs first (`@After(order = 20000)`).
+  Two `@After` hooks with the default order run in no guaranteed order.
+- The IntelliJ console can cut off the end of a run; the complete log is the newest file in `target/logs/`.
 
 ## Decisions log
 
@@ -175,3 +179,12 @@ Add one line per decision so future sessions keep it.
   "Fix before PR"); praise in reviews is always specific, never generic.
 - 2026-11-14: Hook classes live in `StepDefinition/Hooks/`, one per API (`PlaceHooks`, `ProductHooks`); a
   `CommonHooks` class is added only when the first cross-cutting hook is needed.
+- 2026-11-17: Project layouts (README, CLAUDE.md, the best-practices skill) describe folders and their naming pattern
+  (`<Name>Api`, `<Name>Hooks`), not every file; only one-of-a-kind files are listed. A new API changes no layout.
+- 2026-11-17: Setup data that more than one hook or step needs is created by a class in `Setup/` (`ProductSetup`,
+  `OrderSetup`), injected by PicoContainer; it builds, sends, registers for cleanup, asserts and stores the id in
+  `TestContext`. Extracted at the third copy ("rule of three").
+- 2026-11-17: A precondition the scenario is about stays a visible step (`Given a product exists in the store`);
+  setup the reader doesn't need to see goes in a tagged hook (`@DeleteOrder`).
+- 2026-11-17: Dependent resources are cleaned up first: `@After(order = 20000)` deletes orders before the default
+  (10000) product cleanup.

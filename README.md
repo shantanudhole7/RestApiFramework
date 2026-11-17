@@ -1,6 +1,6 @@
 # RestApiFramework – REST Assured API Test Automation Framework
 
-API test automation framework for the [Rahul Shetty Academy](https://rahulshettyacademy.com) **Place API** and **e-commerce (Product) API**,
+API test automation framework for the [Rahul Shetty Academy](https://rahulshettyacademy.com) **Place API** and **e-commerce (Product and Order) API**,
 built with **Java**, **REST Assured**, **Cucumber** and **Maven**. Scenarios are written in Gherkin, requests are
 built from POJOs and a shared request specification, and every check is logged as PASS or FAIL.
 
@@ -25,57 +25,37 @@ built from POJOs and a shared request specification, and every check is logged a
 
 ```
 RestApiFramework/
-├── .claude/skills/
-│   ├── best-practices/SKILL.md                         # Coding standards (applied by Claude Code automatically)
-│   └── test-review/SKILL.md                            # /test-review: reviews the code against the standards
-├── .github/CODEOWNERS                                  # Every pull request needs the code owner's review
+├── .claude/skills/                       # best-practices (coding standards), test-review (/test-review)
+├── .github/CODEOWNERS                    # Every pull request needs the code owner's review
 ├── src/
-│   ├── main/java/
-│   │   └── Pojo/                                       # Request models: AddPlace, Location, Login, Product
+│   ├── main/java/Pojo/                   # Request models (JSON via Jackson; Product is sent as multipart)
 │   └── test/
 │       ├── java/
-│       │   ├── Api/
-│       │   │   ├── ApiClient.java                      # Sends requests from steps; registers created ids for cleanup
-│       │   │   ├── LoginApi.java                       # Logs in once per run and shares the session
-│       │   │   ├── PlaceApi.java                       # Place endpoint calls for hooks and setup
-│       │   │   └── ProductApi.java                     # Product requests (create, get, delete) with the token
-│       │   ├── ApiDataBuilder/
-│       │   │   ├── LoginApiDataBuilder.java            # Builds the login payload
-│       │   │   ├── PlaceApiDataBuilder.java            # Builds Add Place and Delete Place payloads
-│       │   │   └── ProductApiDataBuilder.java          # Builds Create Product data (custom or default)
-│       │   ├── Assertion/                              # Assertions: logging assertEquals and HTTP status checks (PASS/FAIL)
-│       │   ├── Context/
-│       │   │   ├── AuthSession.java                    # Immutable e-commerce session: token and user id
-│       │   │   └── TestContext.java                    # Per-scenario state: request, response, ids, created resources
+│       │   ├── Api/                      # One class per API (<Name>Api): builds and sends requests, no assertions;
+│       │   │                             # ApiClient sends step requests and registers created ids for cleanup;
+│       │   │                             # LoginApi logs in once per run and shares the session
+│       │   ├── ApiDataBuilder/           # One Test Data Builder per API (<Name>ApiDataBuilder): custom or default payloads
+│       │   ├── Assertion/                # Logging assertions (PASS/FAIL) and HTTP status checks
+│       │   ├── Context/                  # TestContext (per-scenario state), AuthSession (the run's session)
 │       │   ├── cucumber/Options/
-│       │   │   └── TestRunner.java                     # JUnit runner: features path, glue, report plugins
-│       │   ├── Features/
-│       │   │   ├── PlaceApi.feature                    # Place API scenarios
-│       │   │   └── ProductApi.feature                  # Product API scenarios (logged-in user)
-│       │   ├── Logger/                                 # Log: logInformation, logWarning, logError
+│       │   │   └── TestRunner.java       # JUnit runner: features path, glue, report plugins
+│       │   ├── Features/                 # One feature file per API (<Name>Api.feature)
+│       │   ├── Logger/                   # The shared logger: logInformation, logWarning, logError
 │       │   ├── Resources/
-│       │   │   ├── Global.properties                   # Settings: base URI, API key
-│       │   │   ├── GlobalEnum.java                     # Endpoint paths for the Place and e-commerce APIs
-│       │   │   └── secrets.properties.example          # Template for the git-ignored secrets.properties
-│       │   ├── Specification/
-│       │   │   └── Specifications.java                 # Request/response specs: Place, login, e-commerce
-│       │   ├── StepDefinition/
-│       │   │   ├── Hooks/
-│       │   │   │   ├── PlaceHooks.java                 # Setup for @DeletePlace, and cleanup of created places
-│       │   │   │   └── ProductHooks.java               # Setup for @DeleteProduct, and cleanup of created products
-│       │   │   ├── CommonStepDefinition.java           # Steps shared by every feature
-│       │   │   ├── LoginStepDefinition.java            # The "the user is logged in" step
-│       │   │   ├── PlaceApiStepDefinition.java         # Place API steps
-│       │   │   └── ProductApiStepDefinition.java       # Product API steps
-│       │   └── Utilities/
-│       │       ├── ConfigReader.java                   # Reads settings and secrets
-│       │       └── ResponseUtils.java                  # Utility methods for handling API responses
+│       │   │   ├── Global.properties     # Settings: base URI, API key
+│       │   │   ├── GlobalEnum.java       # Every endpoint path; create endpoints declare their id path
+│       │   │   └── secrets.properties.example   # Template for the git-ignored secrets.properties
+│       │   ├── Setup/                    # Setup data shared by hooks and steps (<Name>Setup): create, register, check
+│       │   ├── Specification/            # Shared request and response specs: Place, login, e-commerce
+│       │   ├── StepDefinition/           # One step class per API (<Name>ApiStepDefinition), plus Common and Login steps
+│       │   │   └── Hooks/                # One hook class per API (<Name>Hooks): setup by tag, cleanup after every scenario
+│       │   └── Utilities/                # ConfigReader (settings, secrets), ResponseUtils (JSON)
 │       └── resources/
-│           ├── files/product.jpeg                      # Placeholder image uploaded by Create Product
-│           ├── logback-test.xml                        # Log format and outputs
-│           └── allure.properties                       # Allure results folder
-├── CLAUDE.md                                           # Project context and rules for Claude Code
-├── pom.xml                                             # Dependencies and plugins
+│           ├── files/                    # Test files, e.g. the placeholder image uploaded by Create Product
+│           ├── logback-test.xml          # Log format and outputs
+│           └── allure.properties         # Allure results folder
+├── CLAUDE.md                             # Project context and rules for Claude Code
+├── pom.xml                               # Dependencies and plugins
 └── README.md
 ```
 
@@ -140,8 +120,8 @@ Run from the project root. The scenarios call the live practice API.
 | By tag                | `mvn test -Dcucumber.filter.tags="@AddPlace"`                 |
 | One scenario          | Green arrow next to the scenario in the `.feature` file       |
 
-Tags: `@PlaceApi` and `@ProductApi` (every scenario of that API), `@AddPlace`, `@DeletePlace`, `@CreateProduct`,
-`@DeleteProduct`, `@Smoke`.
+Tags: `@PlaceApi`, `@ProductApi` and `@OrderApi` (every scenario of that API), `@AddPlace`, `@DeletePlace`,
+`@CreateProduct`, `@DeleteProduct`, `@CreateOrder`, `@DeleteOrder`, `@Smoke`.
 
 **Note:** `pom.xml` sets `testFailureIgnore = true`, so Maven reports **BUILD SUCCESS even when scenarios fail**.
 Always check the test results in the console (`pretty` output) or the report.
@@ -377,6 +357,33 @@ from `LoginApi`, which logs in once per run with the credentials from `secrets.p
 - This API answers **201** for a created product, and **400** with `Product not found` (not 404) for a missing one;
   on delete the message is spelled `Product not foundd`. The tests assert that actual contract, and product cleanup
   treats it as "already deleted".
+
+### Order API
+
+`OrderApi.feature` also works as a logged-in user. An order needs a product, so the Create scenario creates one first,
+as a visible step, because it is part of what is being tested:
+
+```gherkin
+  @CreateOrder @Smoke
+  Scenario Outline: Create an order and verify it can be fetched
+    Given a product exists in the store
+    And Place Order payload with country "<Country>"
+    When User calls "CREATE_ORDER" with "POST" http request
+    Then the API call succeeds with status code 201
+    And "message" in response body is "Order Placed Successfully"
+    And the order created can be fetched using "GET_ORDER"
+    And the fetched order contains the ordered product
+```
+
+- Setup data that hooks and steps both need is created by the classes in `Setup/`: `ProductSetup.createDefaultProduct`
+  and `OrderSetup.placeDefaultOrder` build, send, register for cleanup, check, and store the id in `TestContext`, so
+  that sequence exists once.
+- `@Before("@DeleteOrder")` in `OrderHooks` creates a product and places an order for each Delete scenario.
+- An order references its product, so cleanup deletes orders first: `@After(order = 20000)` in `OrderHooks` runs
+  before the product cleanup (for `@After`, a higher order runs first).
+- This API answers **201** for a placed order, with the new id at `orders[0]` (an array). An order is fetched by query
+  parameter (`get-orders-details?id=…`) and deleted by path (`delete-order/{orderId}`). A missing order gets **400**
+  with `Order not found` on both fetch and delete.
 
 ## Contributing
 

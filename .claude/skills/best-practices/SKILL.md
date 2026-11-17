@@ -268,7 +268,7 @@ Feature: Place API
 - Cleanup never fails a scenario. "Deleted" and "already gone" are logged as info (Place: 200 and 404; products: 200,
   and 400 with "Product not found…"; orders: 200, and 400 with "Order not found"); any other status or exception is logged as a
   warning with the status and body.
-- Hooks depend on `TestContext`, `Api` classes and `PlaceApiDataBuilder`, never on step classes. When a hook creates
+- Hooks depend on `TestContext`, Api classes, data builders and Setup classes, never on step classes. When a hook creates
   data a step uses, add a `#` comment in the scenario that names the hook.
 - A setup hook verifies its own call (`assertHttpOk`), so a failed setup fails in the hook and skips the steps.
 - `Api` classes (`PlaceApi`) send one request each (`addPlace`, `deletePlace`) from the shared specs and return

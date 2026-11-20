@@ -47,6 +47,8 @@ public final class Retry {
 	 * @param delayMs     wait between tries, in milliseconds; 0 in unit tests
 	 * @return the last response; still a 5xx if every attempt failed with one
 	 * @throws IOException the call's last error, if every attempt threw one
+	 * @throws IllegalStateException    if a cleanup.retry.* setting is missing from Global.properties
+	 * @throws IllegalArgumentException if cleanup.retry.attempts is less than 1
 	 */
 	static Response sendWithRetry(ApiCall call, String description, int attempts,
 	                              long delayMs) throws IOException {

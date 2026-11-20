@@ -45,8 +45,8 @@ public class RetryTest {
 			return response(HTTP_OK);
 		};
 		Response response = Retry.sendWithRetry(call, TEST_CALL, ATTEMPTS, DELAY_MS);
-		assertHttpStatus(response, HTTP_OK);
 		assertEquals("Verify API call was sent twice", 2, calls.get());
+		assertHttpStatus(response, HTTP_OK);
 	}
 
 	/** A client error (4xx) is returned at once: the call is sent only once. */
@@ -58,10 +58,9 @@ public class RetryTest {
 			return response(HTTP_BAD_REQUEST);
 		};
 		Response response = Retry.sendWithRetry(call, TEST_CALL, ATTEMPTS, DELAY_MS);
-		assertHttpStatus(response, HTTP_BAD_REQUEST);
 		assertEquals("Verify API call was sent once", 1, calls.get());
+		assertHttpStatus(response, HTTP_BAD_REQUEST);
 	}
-
 	/** A server error on every attempt: Retry stops after the last attempt and returns that 5xx. */
 	@Test
 	public void returnsLastServerErrorWhenAttemptsRunOut() throws IOException {
@@ -71,8 +70,8 @@ public class RetryTest {
 			return response(HTTP_UNAVAILABLE);
 		};
 		Response response = Retry.sendWithRetry(call, TEST_CALL, ATTEMPTS, DELAY_MS);
-		assertHttpStatus(response, HTTP_UNAVAILABLE);
 		assertEquals("Verify API call was sent twice", 2, calls.get());
+		assertHttpStatus(response, HTTP_UNAVAILABLE);
 	}
 
 	/** A network error is retried, and the call's second answer (200) is returned. */
@@ -86,8 +85,8 @@ public class RetryTest {
 			return response(HTTP_OK);
 		};
 		Response response = Retry.sendWithRetry(call, TEST_CALL, ATTEMPTS, DELAY_MS);
-		assertHttpStatus(response, HTTP_OK);
 		assertEquals("Verify API call was sent twice", 2, calls.get());
+		assertHttpStatus(response, HTTP_OK);
 	}
 
 	/** The network is down every time: Retry gives up after the last attempt and throws the network error. */
@@ -100,8 +99,8 @@ public class RetryTest {
 		};
 		IOException exception = assertThrows(IOException.class,
 		                                     () -> Retry.sendWithRetry(call, TEST_CALL, ATTEMPTS, DELAY_MS));
-		assertEquals("Verify last network error message", "Network error", exception.getMessage());
 		assertEquals("Verify API call was sent twice", 2, calls.get());
+		assertEquals("Verify last network error message", "Network error", exception.getMessage());
 	}
 
 	/** Zero attempts is rejected at once, instead of retrying forever. */
@@ -112,7 +111,7 @@ public class RetryTest {
 			calls.incrementAndGet();
 			return response(HTTP_UNAVAILABLE);
 		};
-		assertThrows(IllegalArgumentException.class, () -> Retry.sendWithRetry(call, TEST_CALL, 0, DELAY_MS));
 		assertEquals("Verify the call was never sent", 0, calls.get());
+		assertThrows(IllegalArgumentException.class, () -> Retry.sendWithRetry(call, TEST_CALL, 0, DELAY_MS));
 	}
 }

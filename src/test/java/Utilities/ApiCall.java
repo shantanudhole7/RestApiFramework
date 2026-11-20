@@ -15,7 +15,7 @@ public interface ApiCall {
 	 * Send the call.
 	 *
 	 * @return the response of the call
-	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 * @throws IOException on a network error, or if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
 	Response call() throws IOException;
 }

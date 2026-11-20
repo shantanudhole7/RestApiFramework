@@ -11,7 +11,11 @@ import static java.net.HttpURLConnection.HTTP_OK;
 /**
  * Logging assertions: every check logs a PASS or FAIL line with expected and actual values.
  */
-public class Assertions {
+public final class Assertions {
+
+	private Assertions() {
+		// Prevent instantiation of this utility class
+	}
 
 	/**
 	 * Assert that two values are equal, and log the result as a PASS or FAIL line.

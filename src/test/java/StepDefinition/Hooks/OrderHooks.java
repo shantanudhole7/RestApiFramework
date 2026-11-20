@@ -73,10 +73,12 @@ public class OrderHooks {
 				} else {
 					String details = " | Status: " + statusCode + " | Body: " + response.asString();
 					logWarning("Cleanup: could not delete order " + orderId + details);
+					testContext.markCleanupFailed(GlobalEnum.CREATE_ORDER);
 				}
 			} catch (Exception | AssertionError e) {
 				// AssertionError too: the shared response spec throws it for a non-JSON response
 				logWarning("Cleanup: could not delete order " + orderId + " | " + e.getMessage());
+				testContext.markCleanupFailed(GlobalEnum.CREATE_ORDER);
 			}
 		}
 	}

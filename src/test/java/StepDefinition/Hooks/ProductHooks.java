@@ -42,6 +42,8 @@ public class ProductHooks {
 	 * Delete every product created in the scenario, whether the scenario passed or failed.
 	 * Cleanup never fails the scenario: a product that can't be deleted is logged as a warning instead.
 	 * A server or network error is retried first (Retry, cleanup.retry.* in Global.properties).
+	 * If an order could not be deleted, the scenario's products are kept (and logged), so no order is left
+	 * pointing at a deleted product. Each scenario creates one product, so keeping all of them is exact.
 	 */
 	@After
 	public void cleanUpCreatedProducts() {
@@ -50,6 +52,13 @@ public class ProductHooks {
 			return;
 		}
 
+		if (testContext.hasCleanupFailed(GlobalEnum.CREATE_ORDER)) {
+			for (String productId : productIds) {
+				logWarning("Cleanup: kept product " + productId
+						           + " because an order that references it could not be deleted");
+			}
+			return;
+		}
 		ProductApi productApi = new ProductApi();
 		for (String productId : productIds) {
 			try {

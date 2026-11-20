@@ -33,7 +33,26 @@ public final class Retry {
 	public static Response sendWithRetry(ApiCall call, String description) throws IOException {
 		int attempts = Integer.parseInt(requiredSetting(ATTEMPTS_KEY));
 		long delayMs = Long.parseLong(requiredSetting(DELAY_KEY));
+		return sendWithRetry(call, description, attempts, delayMs);
+	}
 
+	/**
+	 * Send the call; if it fails with a server error (5xx) or a network error, wait and send it again,
+	 * up to {@code attempts} tries in total. 4xx and other responses are returned at once, never retried.
+	 * Package-private so RetryTest can pass its own settings.
+	 *
+	 * @param call        the API call to send, e.g. {@code () -> orderApi.deleteOrder(orderId, session)}
+	 * @param description what the call does, for the log, e.g. "delete order 6afc…"
+	 * @param attempts    total tries, including the first; at least 1
+	 * @param delayMs     wait between tries, in milliseconds; 0 in unit tests
+	 * @return the last response; still a 5xx if every attempt failed with one
+	 * @throws IOException the call's last error, if every attempt threw one
+	 */
+	static Response sendWithRetry(ApiCall call, String description, int attempts,
+	                              long delayMs) throws IOException {
+		if (attempts < 1) {
+			throw new IllegalArgumentException("Retry attempts must be at least 1, was " + attempts);
+		}
 		for (int attempt = 1; ; attempt++) {                 // no end condition here: every path inside returns or throws
 			String problem;
 			try {

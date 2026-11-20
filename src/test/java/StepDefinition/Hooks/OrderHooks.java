@@ -18,6 +18,7 @@ import static Api.OrderApi.ORDER_NOT_FOUND_MESSAGE;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
 import static Utilities.ResponseUtils.getJsonPath;
+import static Utilities.Retry.sendWithRetry;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_OK;
 
@@ -48,6 +49,7 @@ public class OrderHooks {
 	/**
 	 * Delete every order created in the scenario, whether the scenario passed or failed.
 	 * Cleanup never fails the scenario: an order that can't be deleted is logged as a warning instead.
+	 * A server or network error is retried first (Retry, cleanup.retry.* in Global.properties).
 	 * Runs before product cleanup (for @After, a higher order runs first), so orders are deleted before
 	 * the products they reference.
 	 */
@@ -61,7 +63,8 @@ public class OrderHooks {
 		OrderApi orderApi = new OrderApi();
 		for (String orderId : orderIds) {
 			try {
-				Response response = orderApi.deleteOrder(orderId, LoginApi.session());
+				Response response = sendWithRetry(() -> orderApi.deleteOrder(orderId, LoginApi.session()),
+				                                  "delete order " + orderId);
 				int statusCode = response.statusCode();
 				if (statusCode == HTTP_OK) {
 					logInformation("Cleanup: deleted order " + orderId);

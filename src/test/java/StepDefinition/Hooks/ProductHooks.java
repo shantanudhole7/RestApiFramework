@@ -16,6 +16,7 @@ import static Api.ProductApi.PRODUCT_NOT_FOUND_MESSAGE;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
 import static Utilities.ResponseUtils.getJsonPath;
+import static Utilities.Retry.sendWithRetry;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_OK;
 
@@ -40,6 +41,7 @@ public class ProductHooks {
 	/**
 	 * Delete every product created in the scenario, whether the scenario passed or failed.
 	 * Cleanup never fails the scenario: a product that can't be deleted is logged as a warning instead.
+	 * A server or network error is retried first (Retry, cleanup.retry.* in Global.properties).
 	 */
 	@After
 	public void cleanUpCreatedProducts() {
@@ -51,7 +53,8 @@ public class ProductHooks {
 		ProductApi productApi = new ProductApi();
 		for (String productId : productIds) {
 			try {
-				Response response = productApi.deleteProduct(productId, LoginApi.session());
+				Response response = sendWithRetry(() -> productApi.deleteProduct(productId, LoginApi.session()),
+				                                  "delete product " + productId);
 				int statusCode = response.statusCode();
 				if (statusCode == HTTP_OK) {
 					logInformation("Cleanup: deleted product " + productId);

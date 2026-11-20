@@ -42,14 +42,15 @@ RestApiFramework/
 │       │   ├── Features/                 # One feature file per API (<Name>Api.feature)
 │       │   ├── Logger/                   # The shared logger: logInformation, logWarning, logError
 │       │   ├── Resources/
-│       │   │   ├── Global.properties     # Settings: base URI, API key
+│       │   │   ├── Global.properties     # Settings: base URI, API key, cleanup retry
 │       │   │   ├── GlobalEnum.java       # Every endpoint path; create endpoints declare their id path
 │       │   │   └── secrets.properties.example   # Template for the git-ignored secrets.properties
 │       │   ├── Setup/                    # Setup data shared by hooks and steps (<Name>Setup): create, register, check
 │       │   ├── Specification/            # Shared request and response specs: Place, login, e-commerce
 │       │   ├── StepDefinition/           # One step class per API (<Name>ApiStepDefinition), plus Common and Login steps
 │       │   │   └── Hooks/                # One hook class per API (<Name>Hooks): setup by tag, cleanup after every scenario
-│       │   └── Utilities/                # ConfigReader (settings, secrets), ResponseUtils (JSON)
+│       │   └── Utilities/                # ConfigReader (settings, secrets), ResponseUtils (JSON),
+│       │                                 # Retry + ApiCall (resend a failed cleanup call), RetryTest (its unit tests)
 │       └── resources/
 │           ├── files/                    # Test files, e.g. the placeholder image uploaded by Create Product
 │           ├── logback-test.xml          # Log format and outputs
@@ -112,13 +113,14 @@ SUCCESS**.
 
 ## Running Tests
 
-Run from the project root. The scenarios call the live practice API.
+Run from the project root. The scenarios call the live practice API; the unit tests (`RetryTest`) don't call any API.
 
 | Goal                  | Command                                                       |
 |-----------------------|---------------------------------------------------------------|
 | All scenarios         | `mvn test`, or run `TestRunner` in IntelliJ                   |
 | By tag                | `mvn test -Dcucumber.filter.tags="@AddPlace"`                 |
 | One scenario          | Green arrow next to the scenario in the `.feature` file       |
+| Unit tests            | Green arrow next to `RetryTest`; `mvn test` runs them too     |
 
 Tags: `@PlaceApi`, `@ProductApi` and `@OrderApi` (every scenario of that API), `@AddPlace`, `@DeletePlace`,
 `@CreateProduct`, `@DeleteProduct`, `@CreateOrder`, `@DeleteOrder`, `@Smoke`.
@@ -279,10 +281,23 @@ already gone is logged as info, and any other problem as a warning.
 @After
 public void cleanUpCreatedPlaces() {
     for (String placeId : testContext.getCreatedIds(GlobalEnum.ADD_PLACE)) {
-        Response response = placeApi.deletePlace(placeId);   // 200 deleted, 404 already gone, else warning
+        Response response = sendWithRetry(() -> placeApi.deletePlace(placeId), "delete place " + placeId);
+        // 200 deleted, 404 already gone, else warning
     }
 }
 ```
+
+When a delete itself fails, cleanup still never fails the scenario:
+
+- **Retry:** each delete goes through `Retry.sendWithRetry`. A server error (5xx) or a network error is retried after
+  a short pause, up to `cleanup.retry.attempts` tries with `cleanup.retry.delay.ms` between them (`Global.properties`).
+  A 4xx is never retried, because the request itself is wrong. If every try fails, the hook logs a warning with the
+  id, status and body.
+- **Keep the parent:** if an order still can't be deleted, `ProductHooks` keeps the scenario's products and logs each
+  one, so no order is left pointing at a deleted product. `OrderHooks` leaves that note in `TestContext`
+  (`markCleanupFailed`), and runs first because of `@After(order = 20000)`.
+- The retry rules are covered by unit tests (`Utilities/RetryTest`) with fake responses, because the live API can't be
+  made to fail on demand.
 
 ### Scenarios and step definitions
 

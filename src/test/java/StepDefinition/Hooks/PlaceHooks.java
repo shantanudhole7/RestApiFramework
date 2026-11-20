@@ -15,6 +15,7 @@ import static Assertion.Assertions.assertHttpOk;
 import static Logger.Log.logInformation;
 import static Logger.Log.logWarning;
 import static Utilities.ResponseUtils.getJsonPath;
+import static Utilities.Retry.sendWithRetry;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 
@@ -61,6 +62,7 @@ public class PlaceHooks {
 	/**
 	 * Delete every place created in the scenario, whether the scenario passed or failed.
 	 * Cleanup never fails the scenario: a place that can't be deleted is logged as a warning instead.
+	 * A server or network error is retried first (Retry, cleanup.retry.* in Global.properties).
 	 */
 	@After
 	public void cleanUpCreatedPlaces() {
@@ -72,7 +74,7 @@ public class PlaceHooks {
 		PlaceApi placeApi = new PlaceApi();
 		for (String placeId : placeIds) {
 			try {
-				Response response = placeApi.deletePlace(placeId);
+				Response response = sendWithRetry(() -> placeApi.deletePlace(placeId), "delete place " + placeId);
 				int statusCode = response.statusCode();
 				if (statusCode == HTTP_OK) {
 					logInformation("Cleanup: deleted place " + placeId);

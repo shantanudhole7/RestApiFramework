@@ -62,7 +62,8 @@ Folders are described by what they hold; most hold one class per API, named afte
   (http call, status, response body) and `LoginStepDefinition` (the "the user is logged in" step)
 - `src/test/java/StepDefinition/Hooks/` one hook class per API (`<Name>Hooks`): `@Before("@Delete<Name>")` creates what
   the Delete scenario deletes; `@After` deletes everything the scenario created
-- `src/test/java/Utilities/` `ConfigReader` (settings and secrets), `ResponseUtils` (JSON helper)
+- `src/test/java/Utilities/` `ConfigReader` (settings and secrets), `ResponseUtils` (JSON helper), `Retry` and
+  `ApiCall` (resend a failed cleanup call on 5xx or network errors), `RetryTest` (unit tests for `Retry`)
 - `src/test/resources/` `files/` (test files, e.g. the placeholder product image), `logback-test.xml` (log format and
   outputs), `allure.properties` (Allure results folder, `target/allure-results`)
 - Generated, never edit or commit: `target/`, `requestLogs.txt`, `.allure/` (Allure tool downloaded by `allure:serve`)
@@ -124,6 +125,14 @@ Folders are described by what they hold; most hold one class per API, named afte
 - Cleanup order matters: an order references its product, so `OrderHooks` cleanup runs first (`@After(order = 20000)`).
   Two `@After` hooks with the default order run in no guaranteed order.
 - The IntelliJ console can cut off the end of a run; the complete log is the newest file in `target/logs/`.
+
+- Cleanup retries only server errors (5xx) and network errors (`IOException`), never 4xx. A non-JSON error page (e.g. an
+  HTML 502) fails the shared response spec with an `AssertionError` before the status is seen, so it is not retried;
+  the hook logs it as a warning.
+- `cleanup.retry.attempts` must be at least 1 (`Retry` rejects 0, which would otherwise retry forever).
+- "Kept product" depends on hook order: `OrderHooks` (`@After(order = 20000)`) must run before `ProductHooks` to leave
+  the `markCleanupFailed` note. Removing that order breaks the protection silently.
+- `RetryTest` runs without the API; `mvn test` runs it together with `TestRunner`.
 
 ## Decisions log
 
@@ -188,3 +197,11 @@ Add one line per decision so future sessions keep it.
   setup the reader doesn't need to see goes in a tagged hook (`@DeleteOrder`).
 - 2026-11-17: Dependent resources are cleaned up first: `@After(order = 20000)` deletes orders before the default
   (10000) product cleanup.
+- 2026-11-20: Cleanup deletes go through `Utilities/Retry`: a bounded retry for transient errors only (5xx and network
+  errors), with `cleanup.retry.attempts` and `cleanup.retry.delay.ms` in `Global.properties`. The pause between tries
+  is the only allowed `Thread.sleep`.
+- 2026-11-20: A parent is never deleted while its child still exists: when an order can't be deleted, the scenario's
+  products are kept and logged (`TestContext.markCleanupFailed`).
+- 2026-11-20: Framework logic that the live API can't trigger (retries, failure paths) gets JUnit unit tests with fake
+  responses (`ResponseBuilder`), in the same package as the class they test (`Utilities/RetryTest`), so they can reach
+  package-private methods. Revisit when framework code moves to `src/main/java` (planned `refactor/maven-layout`).

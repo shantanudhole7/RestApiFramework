@@ -291,6 +291,15 @@ Feature: Place API
   in `TestContext`; callers pass the session and keep their own "why" log line.
 - When one resource references another (an order references a product), its cleanup hook runs first:
   `@After(order = 20000)`. For `@After`, a higher order runs first.
+- Cleanup deletes go through `Retry.sendWithRetry(() -> api.deleteX(id, session), "delete x " + id)`. Only 5xx and
+  network errors are retried (settings `cleanup.retry.*` in `Global.properties`); 4xx never is. The pause between
+  tries is the only allowed `Thread.sleep`.
+- Never delete a parent while its child still exists: a cleanup hook that couldn't delete a child calls
+  `testContext.markCleanupFailed(endpoint)`, and the parent's cleanup checks `hasCleanupFailed` and keeps (and logs)
+  its data instead.
+- Framework logic the live API can't trigger (retries, failure paths) gets JUnit unit tests with fake responses
+  (`ResponseBuilder`), in the same package as the class under test (`Utilities/RetryTest`). Each test checks the
+  result and how many calls were made, so it fails if the behaviour is wrong.
 
 ## 18. Reporting
 
@@ -321,4 +330,5 @@ Feature: Place API
 - [ ] A new or changed rule is applied to existing code too: search for the old pattern and fix every match
 - [ ] After adding a tool or plugin, run it once and check `git status`: generated files go in `.gitignore`
 - [ ] Every negative check can fail: a "no longer found" step fetches the id of the thing that was deleted
+- [ ] Framework logic that the live API can't trigger (retries, failure paths) has a unit test, and `RetryTest` passes
 - [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt or the Allure results

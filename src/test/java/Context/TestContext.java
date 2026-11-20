@@ -7,8 +7,10 @@ import io.restassured.specification.RequestSpecification;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static Logger.Log.logInformation;
 
@@ -23,6 +25,7 @@ public class TestContext {
 	private Response response;
 	private String placeId;
 	private final Map<GlobalEnum, List<String>> createdIds = new EnumMap<>(GlobalEnum.class);
+	private final Set<GlobalEnum> failedCleanups = EnumSet.noneOf(GlobalEnum.class);
 	private AuthSession authSession;
 	private String productId;
 	private String orderId;
@@ -115,6 +118,28 @@ public class TestContext {
 	 */
 	public List<String> getCreatedIds(GlobalEnum endpoint) {
 		return Collections.unmodifiableList(createdIds.getOrDefault(endpoint, Collections.emptyList()));
+	}
+
+	/**
+	 * Remember that cleanup couldn't delete something created by this endpoint,
+	 * so cleanup of what it depends on can keep its data (an order's product).
+	 *
+	 * @param endpoint the create endpoint, e.g. CREATE_ORDER
+	 */
+	public void markCleanupFailed(GlobalEnum endpoint) {
+		failedCleanups.add(endpoint);
+	}
+
+	/**
+	 * Check whether cleanup failed to delete something created by this endpoint
+	 * in this scenario.
+	 *
+	 * @param endpoint the create endpoint, e.g. CREATE_ORDER
+	 * @return true if cleanup failed to delete something created by this endpoint
+	 *         in this scenario
+	 */
+	public boolean hasCleanupFailed(GlobalEnum endpoint) {
+		return failedCleanups.contains(endpoint);
 	}
 
 	/** @return the logged-in session, set by the "the user is logged in" step */

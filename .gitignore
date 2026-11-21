@@ -12,4 +12,4 @@ requestLogs.txt
 .allure/
 
 # Secrets for testing, not checked into source control
-src/test/java/Resources/secrets.properties
+src/test/resources/secrets.properties

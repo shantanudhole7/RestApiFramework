@@ -196,7 +196,7 @@ src/
 ## 14. Generated files
 
 Never commit build output, IDE files or local secrets. `.gitignore` covers:
-`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/` and `src/test/java/Resources/secrets.properties` (local credentials).
+`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/` and `src/test/resources/secrets.propertie` (local credentials).
 
 ## 15. Git workflow
 

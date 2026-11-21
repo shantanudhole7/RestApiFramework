@@ -172,7 +172,7 @@ Add one line per decision so future sessions keep it.
 - 2026-11-10: Create endpoints declare the JSON path of the new id in `GlobalEnum`; `ApiClient` registers created ids per endpoint in `TestContext` for cleanup,
   so shared code has no resource-specific conditions and features stay unchanged.
 - 2026-11-10: Generic steps live in `CommonStepDefinition`; requests from steps go through `ApiClient`; step classes never call each other's step methods.
-- 2026-11-14: E-commerce credentials live in the git-ignored `src/test/java/Resources/secrets.properties` (with a committed
+- 2026-11-14: E-commerce credentials live in the git-ignored `src/test/resources/secrets.properties` (with a committed
   `.example`), read only through `ConfigReader.getSecretValue`; never in `Global.properties`, code or logs.
 - 2026-11-14: `LoginApi` logs in once per run and caches an immutable `AuthSession` in a static field; a deliberate,
   run-scoped exception to "no static state". Scenario state stays in `TestContext`. Its login response skips the

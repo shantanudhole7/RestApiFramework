@@ -24,7 +24,7 @@ If none specified, review:
 - step definitions: `src/test/java/StepDefinition/**/*.java`
 - the runner: `src/test/java/cucumber/Options/TestRunner.java`
 - other Java files under `src/main/java/**` and `src/test/java/**`
-- `src/test/java/Resources/Global.properties` and `src/test/resources/logback-test.xml`
+- `src/test/resources/Global.properties` and `src/test/resources/logback-test.xml`
 
 Never review generated or IDE files (`target/`, `.idea/`, `requestLogs.txt`).
 

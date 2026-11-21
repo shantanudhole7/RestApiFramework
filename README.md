@@ -78,7 +78,7 @@ git clone https://github.com/shantanudhole7/RestApiFramework.git
 
 Open the folder in IntelliJ IDEA as a Maven project and let it download the dependencies.
 
-**3. Check `src/test/java/Resources/Global.properties`**
+**3. Check `src/test/resources/Global.properties`**
 
 ```properties
 # Base URI of the Place API; endpoint paths come from GlobalEnum
@@ -90,7 +90,7 @@ api.key=qaclick123
 
 Write values without quotes. Keys are case-sensitive.
 
-**4. Create `src/test/java/Resources/secrets.properties`** (Product API only)
+**4. Create `src/test/resources/secrets.properties`** (Product API only)
 
 Copy `secrets.properties.example` to `secrets.properties` in the same folder and fill in a test account for the
 e-commerce practice site. The file is git-ignored, so the credentials never reach the repository:

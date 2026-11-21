@@ -56,8 +56,6 @@ public class PlaceApiStepDefinition {
 	@Then("the place created maps to {string} using {string}")
 	public void thePlaceCreatedMapsToUsing(String name, String apiEndPoint) throws IOException {
 		testContext.setPlaceId(getJsonPath(testContext.getResponse(), GlobalEnum.ADD_PLACE.getCreatedIdPath()));
-
-		logInformation("Add place_id to the request specification for the next API call");
 		testContext.setRequestSpecification(new PlaceApi().getPlaceRequest(testContext.getPlaceId()));
 		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
 		assertHttpOk(testContext.getResponse());
@@ -84,7 +82,6 @@ public class PlaceApiStepDefinition {
 	 */
 	@Then("the deleted place can no longer be fetched using {string}")
 	public void theDeletedPlaceCanNoLongerBeFetchedUsing(String apiEndPoint) throws IOException {
-		logInformation("Add place_id to the request specification for the next API call");
 		testContext.setRequestSpecification(new PlaceApi().getPlaceRequest(testContext.getPlaceId()));
 		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
 

@@ -1,10 +1,8 @@
 package Utilities;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Properties;
 
 import static Logger.Log.logError;
@@ -13,13 +11,11 @@ import static Logger.Log.logWarning;
 /** Reads settings from Global.properties and credentials from the git-ignored secrets.properties. */
 public final class ConfigReader {
 
-	/** Location of Global.properties, relative to the project root (the folder tests are run from). */
-	private static final Path PROPERTIES_FILE =
-			Paths.get(System.getProperty("user.dir"), "src", "test", "java", "Resources", "Global.properties");
+	/** Settings file on the test classpath (src/test/resources). */
+	private static final String PROPERTIES_FILE = "Global.properties";
 
-	/** Location of secrets.properties: local credentials, git-ignored and never committed. */
-	private static final Path SECRETS_FILE =
-			Paths.get(System.getProperty("user.dir"), "src", "test", "java", "Resources", "secrets.properties");
+	/** Credentials file on the test classpath (src/test/resources): local, git-ignored and never committed. */
+	private static final String SECRETS_FILE = "secrets.properties";
 
 	private ConfigReader() {
 		// Prevent instantiation of this utility class
@@ -27,8 +23,8 @@ public final class ConfigReader {
 
 	/**
 	 * Read a value from Global.properties.
-	 * The file is read on every call, so changes take effect without restarting.
-	 * Logs a warning if the key is missing, and an error if the file cannot be read.
+	 * The file is read from the test classpath (the build copies it from src/test/resources), so an edit takes
+	 * effect on the next run. Logs a warning if the key is missing, and an error if the file cannot be read.
 	 *
 	 * @param globalKey the key to look up, e.g. "api.base.uri"
 	 * @return the value for the key, or null if the key is not in the file
@@ -37,7 +33,7 @@ public final class ConfigReader {
 	public static String getPropertiesValue(String globalKey) throws IOException {
 		String value = loadProperties(PROPERTIES_FILE).getProperty(globalKey);
 		if (value == null) {
-			logWarning("Key '" + globalKey + "' not found in " + PROPERTIES_FILE.getFileName());
+			logWarning("Key '" + globalKey + "' not found in " + PROPERTIES_FILE);
 		}
 		return value;
 	}
@@ -45,16 +41,20 @@ public final class ConfigReader {
 	/**
 	 * Load a properties file, logging an error if it cannot be read.
 	 *
-	 * @param file file to read the properties value
+	 * @param resourceName name of the properties file on the classpath, e.g. "Global.properties"
 	 * @return the properties loaded from the file
 	 * @throws IOException if properties file cannot be read
 	 */
-	private static Properties loadProperties(Path file) throws IOException {
+	private static Properties loadProperties(String resourceName) throws IOException {
 		Properties properties = new Properties();
-		try (InputStream inputStream = Files.newInputStream(file)) {
+		try (InputStream inputStream = ConfigReader.class.getClassLoader()
+		                                                 .getResourceAsStream(resourceName)) {
+			if (inputStream == null) {
+				throw new FileNotFoundException(resourceName + " not found on the classpath");
+			}
 			properties.load(inputStream);
 		} catch (IOException e) {
-			logError("Could not read " + file + " | " + e.getMessage());
+			logError("Could not read " + resourceName + " | " + e.getMessage());
 			throw e;
 		}
 		return properties;
@@ -70,17 +70,18 @@ public final class ConfigReader {
 	 * @throws IllegalStateException if secrets.properties is missing, or the key is missing or blank
 	 */
 	public static String getSecretValue(String secretKey) throws IOException {
-		if (Files.notExists(SECRETS_FILE)) {
-			logError(SECRETS_FILE.getFileName() + " not found");
+		if (ConfigReader.class.getClassLoader()
+		                      .getResource(SECRETS_FILE) == null) {
+			logError(SECRETS_FILE + " not found");
 			throw new IllegalStateException(
-					SECRETS_FILE.getFileName() + " not found. Copy secrets.properties.example " +
-							"to secrets.properties and fill in the values; see README → Setup.");
+					SECRETS_FILE + " not found. Copy src/test/resources/secrets.properties.example "
+							+ "to secrets.properties in the same folder and fill in the values; see README → Setup.");
 		}
 		String value = loadProperties(SECRETS_FILE).getProperty(secretKey);
 		if (value == null || value.trim()
 		                          .isEmpty()) {
-			logError("Secret '" + secretKey + "' is not set in " + SECRETS_FILE.getFileName());
-			throw new IllegalStateException("Secret '" + secretKey + "' is not set in " + SECRETS_FILE.getFileName());
+			logError("Secret '" + secretKey + "' is not set in " + SECRETS_FILE);
+			throw new IllegalStateException("Secret '" + secretKey + "' is not set in " + SECRETS_FILE);
 		}
 		// Trailing spaces are easy to miss in a properties file and would make the login fail
 		return value.trim();

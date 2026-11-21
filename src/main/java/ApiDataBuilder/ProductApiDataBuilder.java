@@ -2,13 +2,17 @@ package ApiDataBuilder;
 
 import Pojo.Product;
 
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Paths;
+
 /**
  * Builds request bodies for the Product API.
  */
 public class ProductApiDataBuilder {
 
-	/** Image uploaded with every test product: a small, clearly fake picture. */
-	private static final String PRODUCT_IMAGE = "src/test/resources/files/product.jpeg";
+	/** Image uploaded with every test product, on the test classpath (src/test/resources/files): a clearly fake picture. */
+	private static final String PRODUCT_IMAGE = "files/product.jpeg";
 
 	/** Name of the default product, created as setup for scenarios that only need a product to exist. */
 	private static final String DEFAULT_PRODUCT_NAME = "Test Product 3";
@@ -49,7 +53,7 @@ public class ProductApiDataBuilder {
 		                    .setProductPrice(price)
 		                    .setProductFor(productFor)
 		                    .setProductAddedBy(userId)
-		                    .setProductImage(PRODUCT_IMAGE);
+		                    .setProductImage(productImagePath());
 	}
 
 	/**
@@ -62,5 +66,21 @@ public class ProductApiDataBuilder {
 	public Product defaultCreateProductPayload(String userId) {
 		return createProductPayload(DEFAULT_PRODUCT_NAME, DEFAULT_PRODUCT_CATEGORY, DEFAULT_PRODUCT_SUB_CATEGORY,
 		                            DEFAULT_PRODUCT_DESCRIPTION, DEFAULT_PRODUCT_PRICE, DEFAULT_PRODUCT_FOR, userId);
+	}
+
+	/**
+	 * @return the absolute path of the product image, found on the classpath
+	 * @throws IllegalStateException if the image is not on the classpath
+	 */
+	private static String productImagePath() {
+		URL image = ProductApiDataBuilder.class.getClassLoader().getResource(PRODUCT_IMAGE);
+		if (image == null) {
+			throw new IllegalStateException(PRODUCT_IMAGE + " not found on the classpath (src/test/resources)");
+		}
+		try {
+			return Paths.get(image.toURI()).toString();
+		} catch (URISyntaxException e) {
+			throw new IllegalStateException("Invalid path for " + PRODUCT_IMAGE, e);
+		}
 	}
 }

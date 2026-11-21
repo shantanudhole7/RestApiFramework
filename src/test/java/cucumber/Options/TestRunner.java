@@ -10,7 +10,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(Cucumber.class)
 @CucumberOptions(
-		features = "src/test/java/Features",
+		features = "classpath:features",
 		glue = {"StepDefinition"},
 		plugin = {
 				"pretty",

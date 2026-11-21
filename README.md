@@ -28,37 +28,42 @@ RestApiFramework/
 ├── .claude/skills/                       # best-practices (coding standards), test-review (/test-review)
 ├── .github/CODEOWNERS                    # Every pull request needs the code owner's review
 ├── src/
-│   ├── main/java/Pojo/                   # Request models (JSON via Jackson; Product is sent as multipart)
-│   └── test/
+│   ├── main/java/                        # THE FRAMEWORK: what the tests use; no test code here
+│   │   ├── Api/                          # One class per API (<Name>Api): builds and sends requests, no assertions;
+│   │   │                                 # ApiClient sends step requests and registers created ids for cleanup;
+│   │   │                                 # LoginApi logs in once per run and shares the session
+│   │   ├── ApiDataBuilder/               # One Test Data Builder per API (<Name>ApiDataBuilder): custom or default payloads
+│   │   ├── Assertion/                    # Logging assertions (PASS/FAIL) and HTTP status checks; no test library
+│   │   ├── Context/                      # TestContext (per-scenario state), AuthSession (the run's session)
+│   │   ├── Logger/                       # The shared logger: logInformation, logWarning, logError
+│   │   ├── Pojo/                         # Request models (JSON via Jackson; Product is sent as multipart)
+│   │   ├── Resources/
+│   │   │   └── GlobalEnum.java           # Every endpoint path; create endpoints declare their id path
+│   │   ├── Setup/                        # Setup data shared by hooks and steps (<Name>Setup): create, register, check
+│   │   ├── Specification/                # Shared request and response specs: Place, login, e-commerce
+│   │   └── Utilities/                    # ConfigReader (settings, secrets), ResponseUtils (JSON),
+│   │                                     # Retry + ApiCall (resend a failed cleanup call)
+│   └── test/                             # THE TESTS
 │       ├── java/
-│       │   ├── Api/                      # One class per API (<Name>Api): builds and sends requests, no assertions;
-│       │   │                             # ApiClient sends step requests and registers created ids for cleanup;
-│       │   │                             # LoginApi logs in once per run and shares the session
-│       │   ├── ApiDataBuilder/           # One Test Data Builder per API (<Name>ApiDataBuilder): custom or default payloads
-│       │   ├── Assertion/                # Logging assertions (PASS/FAIL) and HTTP status checks
-│       │   ├── Context/                  # TestContext (per-scenario state), AuthSession (the run's session)
 │       │   ├── cucumber/Options/
 │       │   │   └── TestRunner.java       # JUnit runner: features path, glue, report plugins
-│       │   ├── Features/                 # One feature file per API (<Name>Api.feature)
-│       │   ├── Logger/                   # The shared logger: logInformation, logWarning, logError
-│       │   ├── Resources/
-│       │   │   ├── Global.properties     # Settings: base URI, API key, cleanup retry
-│       │   │   ├── GlobalEnum.java       # Every endpoint path; create endpoints declare their id path
-│       │   │   └── secrets.properties.example   # Template for the git-ignored secrets.properties
-│       │   ├── Setup/                    # Setup data shared by hooks and steps (<Name>Setup): create, register, check
-│       │   ├── Specification/            # Shared request and response specs: Place, login, e-commerce
 │       │   ├── StepDefinition/           # One step class per API (<Name>ApiStepDefinition), plus Common and Login steps
 │       │   │   └── Hooks/                # One hook class per API (<Name>Hooks): setup by tag, cleanup after every scenario
-│       │   └── Utilities/                # ConfigReader (settings, secrets), ResponseUtils (JSON),
-│       │                                 # Retry + ApiCall (resend a failed cleanup call), RetryTest (its unit tests)
-│       └── resources/
+│       │   └── Utilities/                # Unit tests of framework code, in the package they test (RetryTest)
+│       └── resources/                    # Non-Java files the tests read, loaded from the classpath
+│           ├── features/                 # One feature file per API (<Name>Api.feature)
 │           ├── files/                    # Test files, e.g. the placeholder image uploaded by Create Product
+│           ├── Global.properties         # Settings: base URI, API key, cleanup retry
+│           ├── secrets.properties.example   # Template for the git-ignored secrets.properties
 │           ├── logback-test.xml          # Log format and outputs
 │           └── allure.properties         # Allure results folder
 ├── CLAUDE.md                             # Project context and rules for Claude Code
 ├── pom.xml                               # Dependencies and plugins
 └── README.md
 ```
+
+`src/main/java` is the framework; `src/test` holds the tests that use it: the runner, the step definitions and
+hooks, unit tests, and the feature files and config they read.
 
 Generated and never committed: `target/` (build output, logs and reports), `requestLogs.txt` and `.allure/` (the
 Allure tool downloaded by `allure:serve`).
@@ -78,7 +83,7 @@ git clone https://github.com/shantanudhole7/RestApiFramework.git
 
 Open the folder in IntelliJ IDEA as a Maven project and let it download the dependencies.
 
-**3. Check `src/test/java/Resources/Global.properties`**
+**3. Check `src/test/resources/Global.properties`**
 
 ```properties
 # Base URI of the Place API; endpoint paths come from GlobalEnum
@@ -90,7 +95,7 @@ api.key=qaclick123
 
 Write values without quotes. Keys are case-sensitive.
 
-**4. Create `src/test/java/Resources/secrets.properties`** (Product API only)
+**4. Create `src/test/resources/secrets.properties`** (Product API only)
 
 Copy `secrets.properties.example` to `secrets.properties` in the same folder and fill in a test account for the
 e-commerce practice site. The file is git-ignored, so the credentials never reach the repository:
@@ -113,7 +118,8 @@ SUCCESS**.
 
 ## Running Tests
 
-Run from the project root. The scenarios call the live practice API; the unit tests (`RetryTest`) don't call any API.
+Config and feature files are loaded from the classpath, so tests can be started from any folder. The scenarios call
+the live practice API; the unit tests (`RetryTest`) don't call any API.
 
 | Goal                  | Command                                                       |
 |-----------------------|---------------------------------------------------------------|
@@ -227,7 +233,7 @@ POJO fields are camelCase; JSON keys that differ are mapped with `@JsonProperty`
 ### Assertions and logging
 
 Every check goes through `Assertions.assertEquals(description, expected, actual)`, which logs a PASS or FAIL line
-with both values and re-throws on failure:
+with both values and throws an `AssertionError` on failure:
 
 ```
 19:40:56 | INFO  | PASS | Verify status in response body | Expected: OK | Actual: OK
@@ -303,7 +309,8 @@ When a delete itself fails, cleanup still never fails the scenario:
 
 ### Scenarios and step definitions
 
-Scenarios live in `src/test/java/Features/`, one feature file per API area:
+Scenarios live in `src/test/resources/features/`, one feature file per API area. `TestRunner` loads them with
+`features = "classpath:features"`:
 
 ```gherkin
 @PlaceApi

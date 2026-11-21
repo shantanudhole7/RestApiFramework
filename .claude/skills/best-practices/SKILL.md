@@ -13,36 +13,38 @@ this file in the same pull request when a rule changes.
 
 ```
 src/
-├── main/java/
-│   └── Pojo/                                   # Request models (JSON via Jackson; Product is multipart)
-├── test/java/
+├── main/java/                                  # THE FRAMEWORK
 │   ├── Api/                                    # One class per API (<Name>Api), plus ApiClient and LoginApi
 │   ├── ApiDataBuilder/                         # One Test Data Builder per API (<Name>ApiDataBuilder)
-│   ├── Assertion/Assertions                    # Logging assertions (PASS/FAIL lines)
-│   ├── cucumber/Options/
-│   │   └── TestRunner                          # JUnit runner: features path, glue, report plugins
+│   ├── Assertion/Assertions                    # Logging assertions (PASS/FAIL lines), no test library
 │   ├── Context/                                # TestContext (per-scenario state), AuthSession (run's session)
-│   ├── Features/                               # One feature file per API (<Name>Api.feature)
 │   ├── Logger/Log                              # The single shared logger
-│   ├── Resources/
-│   │   ├── Global.properties                   # Settings: base URI, API key
-│   │   ├── GlobalEnum                          # API endpoint paths
-│   │   └── secrets.properties.example          # Template for the git-ignored secrets.properties
+│   ├── Pojo/                                   # Request models (JSON via Jackson; Product is multipart)
+│   ├── Resources/GlobalEnum                    # API endpoint paths
 │   ├── Setup/                                  # Setup data shared by hooks and steps (<Name>Setup)
 │   ├── Specification/Specifications            # Request/response specs: Place, login, e-commerce
+│   └── Utilities/                              # ConfigReader, ResponseUtils, Retry, ApiCall
+├── test/java/                                  # THE TESTS
+│   ├── cucumber/Options/
+│   │   └── TestRunner                          # JUnit runner: classpath:features, glue, report plugins
 │   ├── StepDefinition/                         # One step class per API (<Name>ApiStepDefinition), plus Common and Login
 │   │   └── Hooks/                              # One hook class per API (<Name>Hooks): setup and cleanup
-│   └── Utilities/                              # ConfigReader (settings, secrets), ResponseUtils (JSON path)
-└── test/resources/
+│   └── Utilities/RetryTest                     # Unit tests, in the package of the class they test
+└── test/resources/                             # Non-Java files the tests read, from the classpath
+    ├── features/                               # One feature file per API (<Name>Api.feature)
+    ├── Global.properties                       # Settings: base URI, API key, cleanup retry
+    ├── secrets.properties.example              # Template for the git-ignored secrets.properties
     ├── files/                                  # Test files (placeholder image for Create Product)
     ├── logback-test.xml                        # Log format and outputs
     └── allure.properties                       # Allure results folder (target/allure-results)
 ```
 
-- Models that describe the API's JSON go in `src/main/java/Pojo`.
-- Everything that only exists to run tests goes in `src/test/java`.
-- Feature files stay in `src/test/java/Features`; the runner reads them by file path.
-- Non-Java test files that must be on the classpath (like `logback-test.xml`) go in `src/test/resources`.
+- Framework code (everything tests use: API classes, builders, assertions, setup, specs, utilities, POJOs) goes in
+  `src/main/java`. It never uses a test library (Cucumber, JUnit), so it works under any test runner.
+- Tests go in `src/test/java`: the runner, step definitions, hooks, and unit tests of framework code. A unit test keeps
+  the package of the class it tests (`src/test/java/Utilities/RetryTest` for `Utilities.Retry`).
+- Non-Java files the tests read go in `src/test/resources` and are loaded from the classpath: feature files
+  (`features/`, `classpath:features`), config, test files and `logback-test.xml`. Never build a path from `user.dir`.
 - Helpers (`Specifications`, `ConfigReader`, `ResponseUtils`) are final classes with a private constructor and only static methods.
   Use them through static imports; never extend them or create instances. One class per responsibility.
 
@@ -63,8 +65,8 @@ src/
 | Cucumber tag              | PascalCase with `@`                                                 | `@PlaceApi`, `@AddPlace`, `@Smoke`                                    |
 | Branch                    | `<type>/<short-name>`; type `feature`, `refactor`, `fix` or `chore` | `feature/add-place-scenario`, `refactor/single-responsibility`        |
 
-- Never name a method the same as a library method it calls (for example, the custom `assertEquals`
-  calls JUnit as `Assert.assertEquals(...)`; otherwise it would call itself).
+- Never name a method the same as a library method it calls unqualified (a custom `assertEquals` that called
+  `assertEquals(...)` without its class name would call itself).
 - Avoid naming a package after a class it uses (`Logger` vs SLF4J's `Logger`); prefer names that don't clash.
 
 ## 3. POJOs
@@ -88,13 +90,14 @@ src/
 
 ## 4. Configuration
 
-- Settings live in `Resources/Global.properties` as `key = value`, without quotes.
+- Settings live in `src/test/resources/Global.properties` as `key = value`, without quotes. `ConfigReader` loads it
+  from the classpath, so an edit takes effect on the next build and run.
 - Read them only through `ConfigReader.getPropertiesValue("key")`. Never hard-code a base URI, API key or
   other setting in Java code.
 - A missing key returns `null` and logs a warning, so check spelling and case first when a value is `null`.
 - Real secrets (passwords, tokens, private keys) are never committed. The current `api.key` is the
   practice API's public demo key.
-- Credentials live in the git-ignored `Resources/secrets.properties` (template: the committed
+- Credentials live in the git-ignored `src/test/resources/secrets.properties` (template: the committed
   `secrets.properties.example`). Read them only through `ConfigReader.getSecretValue("key")`, which fails fast with a
   clear message if the file or key is missing. Never log a secret's value.
 
@@ -141,7 +144,7 @@ src/
     is wrong. Assert the exact code from the API contract, not just "any 2xx".
   - `assertHttpOk(response)` (200) and `assertHttpNotFound(response)` (404) are named shortcuts for it. Add a new
     shortcut only for a status that several steps check.
-- All of them log `PASS | ...` or `FAIL | ...` with expected and actual values, then re-throw on failure.
+- All of them log `PASS | ...` or `FAIL | ...` with expected and actual values, then throw an `AssertionError` on failure.
 - Don't call JUnit's `assertEquals` directly in tests; the result would not be logged.
 - **Expected before actual**, always. Reversed, failures read the wrong way round.
 - The description starts with `Verify` and names what is being checked:
@@ -182,7 +185,8 @@ src/
 
 ## 12. Dependencies
 
-- Declared in `pom.xml`; test-only libraries use `<scope>test</scope>`.
+- Declared in `pom.xml`. Libraries the framework code in `src/main/java` uses (REST Assured, Jackson, Logback, Allure
+  REST Assured) have the default scope; libraries only tests use (Cucumber, Allure Cucumber) use `<scope>test</scope>`.
 - Add or upgrade a dependency only in its own pull request, or as part of the feature that needs it,
   and say why in the description.
 - Prefer a current version when adding a dependency; check mvnrepository first.
@@ -196,7 +200,7 @@ src/
 ## 14. Generated files
 
 Never commit build output, IDE files or local secrets. `.gitignore` covers:
-`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/` and `src/test/java/Resources/secrets.properties` (local credentials).
+`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/` and `src/test/resources/secrets.propertie` (local credentials).
 
 ## 15. Git workflow
 

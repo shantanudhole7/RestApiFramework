@@ -22,8 +22,8 @@ Academy Place API and e-commerce (Product and Order) API. Study project, committ
 - Java 11 or newer (logback-classic requires it), Maven, IntelliJ IDEA.
 - `mvn` is not on the PATH on my machine yet: run Maven from IntelliJ's **Maven tool window → Lifecycle**.
   The `mvn` commands below work once Maven is installed.
-- Run from the project root: `ConfigReader` locates `Global.properties`, and `TestRunner` locates the feature files,
-  relative to the folder Maven is started from.
+- Config (`Global.properties`, `secrets.properties`) and feature files are loaded from the classpath, so runs don't
+  depend on the working folder.
 
 ## Commands
 
@@ -37,35 +37,44 @@ Academy Place API and e-commerce (Product and Order) API. Study project, committ
 ## Layout
 
 Folders are described by what they hold; most hold one class per API, named after it (`Place`, `Product`, `Order`).
+`src/main/java` is the framework (what tests use); `src/test` is the tests (runner, steps, hooks, unit tests, and the
+feature files and config they read).
 
-- `src/main/java/Pojo/` request models: JSON via Jackson (snake_case keys mapped with `@JsonProperty`); `Product` is
-  sent as multipart form fields
-- `src/test/java/Api/` one class per API (`<Name>Api`): builds unsent requests for steps and sends calls for hooks,
-  with the session's token where needed; stateless, no assertions. Also `ApiClient` (sends the scenario's prepared
-  request, stores the response, registers created ids for cleanup) and `LoginApi` (logs in once per run, caches the session)
-- `src/test/java/ApiDataBuilder/` one Test Data Builder per API (`<Name>ApiDataBuilder`): payloads, custom or default
-- `src/test/java/Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
-  `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404)
-- `src/test/java/Context/` `TestContext` (per-scenario state, injected by cucumber-picocontainer) and `AuthSession`
-  (immutable token and user id of the run's e-commerce session)
-- `src/test/java/cucumber/Options/TestRunner` JUnit runner: features path, glue, `pretty`, Cucumber HTML and Allure plugins
-- `src/test/java/Features/` one feature file per API (`<Name>Api.feature`)
-- `src/test/java/Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
-- `src/test/java/Resources/` `Global.properties` (settings), `GlobalEnum` (endpoints; create endpoints also declare their id path),
-  `secrets.properties` (credentials, git-ignored; copy `secrets.properties.example`)
-- `src/test/java/Setup/` one class per API (`<Name>Setup`): creates setup data that hooks and steps share (build, send,
-  register for cleanup, check, store the id in `TestContext`); injected like `TestContext`
-- `src/test/java/Specification/Specifications` request specs `defaultRequestSpecification()` (Place),
-  `loginRequestSpecification()` (unlogged) and `ecomRequestSpecification()` (token masked), plus the response spec
-  `defaultResponseSpecification()`
-- `src/test/java/StepDefinition/` one step class per API (`<Name>ApiStepDefinition`), plus `CommonStepDefinition`
-  (http call, status, response body) and `LoginStepDefinition` (the "the user is logged in" step)
-- `src/test/java/StepDefinition/Hooks/` one hook class per API (`<Name>Hooks`): `@Before("@Delete<Name>")` creates what
-  the Delete scenario deletes; `@After` deletes everything the scenario created
-- `src/test/java/Utilities/` `ConfigReader` (settings and secrets), `ResponseUtils` (JSON helper), `Retry` and
-  `ApiCall` (resend a failed cleanup call on 5xx or network errors), `RetryTest` (unit tests for `Retry`)
-- `src/test/resources/` `files/` (test files, e.g. the placeholder product image), `logback-test.xml` (log format and
-  outputs), `allure.properties` (Allure results folder, `target/allure-results`)
+Framework, `src/main/java/`:
+- `Api/` one class per API (`<Name>Api`): builds unsent requests for steps and sends calls for hooks, with the
+  session's token where needed; stateless, no assertions. Also `ApiClient` (sends the scenario's prepared request,
+  stores the response, registers created ids for cleanup) and `LoginApi` (logs in once per run, caches the session)
+- `ApiDataBuilder/` one Test Data Builder per API (`<Name>ApiDataBuilder`): payloads, custom or default
+- `Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
+  `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404); throws
+  `AssertionError` itself, no test library
+- `Context/` `TestContext` (per-scenario state, injected by cucumber-picocontainer) and `AuthSession` (immutable token
+  and user id of the run's e-commerce session)
+- `Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
+- `Pojo/` request models: JSON via Jackson (snake_case keys mapped with `@JsonProperty`); `Product` is sent as
+  multipart form fields
+- `Resources/GlobalEnum` endpoints; create endpoints also declare their id path
+- `Setup/` one class per API (`<Name>Setup`): creates setup data that hooks and steps share (build, send, register for
+  cleanup, check, store the id in `TestContext`); injected like `TestContext`
+- `Specification/Specifications` request specs `defaultRequestSpecification()` (Place), `loginRequestSpecification()`
+  (unlogged) and `ecomRequestSpecification()` (token masked), plus the response spec `defaultResponseSpecification()`
+- `Utilities/` `ConfigReader` (settings and secrets, from the classpath), `ResponseUtils` (JSON helper), `Retry` and
+  `ApiCall` (resend a failed cleanup call on 5xx or network errors)
+
+Tests, `src/test/java/`:
+- `cucumber/Options/TestRunner` JUnit runner: `classpath:features`, glue, `pretty`, Cucumber HTML and Allure plugins
+- `StepDefinition/` one step class per API (`<Name>ApiStepDefinition`), plus `CommonStepDefinition` (http call,
+  status, response body) and `LoginStepDefinition` (the "the user is logged in" step)
+- `StepDefinition/Hooks/` one hook class per API (`<Name>Hooks`): `@Before("@Delete<Name>")` creates what the Delete
+  scenario deletes; `@After` deletes everything the scenario created
+- `Utilities/RetryTest` unit tests of framework code, in the same package as the class they test
+
+Test files, `src/test/resources/`:
+- `features/` one feature file per API (`<Name>Api.feature`)
+- `Global.properties` (settings), `secrets.properties` (credentials, git-ignored; copy `secrets.properties.example`)
+- `files/` (test files, e.g. the placeholder product image), `logback-test.xml` (log format and outputs),
+  `allure.properties` (Allure results folder, `target/allure-results`)
+
 - Generated, never edit or commit: `target/`, `requestLogs.txt`, `.allure/` (Allure tool downloaded by `allure:serve`)
 
 ## Conventions (summary; the skill has the full detail)
@@ -133,6 +142,12 @@ Folders are described by what they hold; most hold one class per API, named afte
 - "Kept product" depends on hook order: `OrderHooks` (`@After(order = 20000)`) must run before `ProductHooks` to leave
   the `markCleanupFailed` note. Removing that order breaks the protection silently.
 - `RetryTest` runs without the API; `mvn test` runs it together with `TestRunner`.
+- Config and feature files are read from the build output (`target/test-classes`), which the build copies from
+  `src/test/resources`. If an edit seems ignored, run Build → Rebuild Project.
+- Framework code in `src/main/java` can't see test-scoped libraries (Cucumber, JUnit): code that needs them belongs in
+  `src/test/java`. A compile error there after moving code means a framework class depends on test code.
+- A unit test of framework code must keep the class's package (`src/test/java/Utilities` for `Utilities.Retry`), or it
+  loses access to package-private methods.
 
 ## Decisions log
 
@@ -146,7 +161,7 @@ Add one line per decision so future sessions keep it.
 - 2026-10-30: Packages keep the existing PascalCase names (`Pojo`, `Resources`, `Assertion`, `Logger`).
 - 2026-10-30: Created this CLAUDE.md and the `best-practices` and `test-review` skills.
 - 2026-10-31: POJO fields are camelCase, mapped to snake_case JSON keys with `@JsonProperty` (`phoneNumber` → `phone_number`).
-- 2026-11-03: Feature files are PascalCase, one per API area (`PlaceApi.feature`), kept in `src/test/java/Features`.
+- 2026-11-03: Feature files are PascalCase, one per API area (`PlaceApi.feature`), kept in `src/test/java/Features` (moved to `src/test/resources/features` on 2026-11-21).
 - 2026-11-03: Shared request/response specs are `defaultRequestSpecification()` and `defaultResponseSpecification()`
   in `Utils`; the response spec checks JSON content only, and status codes are verified in the steps.
 - 2026-11-03: Within a branch, work is committed in small working steps (feature file → stubs → steps → outline).
@@ -204,6 +219,14 @@ Add one line per decision so future sessions keep it.
   products are kept and logged (`TestContext.markCleanupFailed`).
 - 2026-11-20: Framework logic that the live API can't trigger (retries, failure paths) gets JUnit unit tests with fake
   responses (`ResponseBuilder`), in the same package as the class they test (`Utilities/RetryTest`), so they can reach
-  package-private methods. Revisit when framework code moves to `src/main/java` (planned `refactor/maven-layout`).
+  package-private methods. Revisited on 2026-11-21: with framework code in `src/main/java`, unit tests stay in the same
+  package under `src/test/java`.
 - 2026-11-21: Every Api class (Place, Product, Order) builds the unsent requests its steps use (`getPlaceRequest`); steps
   never call `given()` themselves, so a request is built in one place.
+- 2026-11-21: Framework code lives in `src/main/java` and tests in `src/test`; the framework grew reusable parts and its
+  own unit tests, which made the split worth it. Package names stayed the same, so no imports changed.
+- 2026-11-21: Non-Java test files live in `src/test/resources` and are loaded from the classpath: config
+  (`Global.properties`, git-ignored `secrets.properties`) and feature files (`features/`, `classpath:features`).
+- 2026-11-21: Framework code depends on no test library: `Assertions` throws `AssertionError` itself, so the framework
+  works under any test runner. Libraries the framework uses have the default scope; only Cucumber and Allure Cucumber
+  stay `test`.

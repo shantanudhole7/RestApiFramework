@@ -28,7 +28,10 @@ public final class Retry {
 	 * @param call        the API call to send, e.g. {@code () -> orderApi.deleteOrder(orderId, session)}
 	 * @param description what the call does, for the log, e.g. "delete order 6afc…"
 	 * @return the last response; still a 5xx if every attempt failed with one
-	 * @throws IOException the last network error, or if Global.properties cannot be read
+	 * @throws IOException              the last network error, or if Global.properties cannot be read
+	 * @throws IllegalStateException    if a cleanup.retry.* setting is missing from Global.properties
+	 * @throws IllegalArgumentException if cleanup.retry.attempts is less than 1, or a cleanup.retry.* setting is not a
+	 *                                  number
 	 */
 	public static Response sendWithRetry(ApiCall call, String description) throws IOException {
 		int attempts = Integer.parseInt(requiredSetting(ATTEMPTS_KEY));
@@ -46,12 +49,10 @@ public final class Retry {
 	 * @param attempts    total tries, including the first; at least 1
 	 * @param delayMs     wait between tries, in milliseconds; 0 in unit tests
 	 * @return the last response; still a 5xx if every attempt failed with one
-	 * @throws IOException the call's last error, if every attempt threw one
-	 * @throws IllegalStateException    if a cleanup.retry.* setting is missing from Global.properties
-	 * @throws IllegalArgumentException if cleanup.retry.attempts is less than 1
+	 * @throws IOException              the call's last error, if every attempt threw one
+	 * @throws IllegalArgumentException if attempts is less than 1
 	 */
-	static Response sendWithRetry(ApiCall call, String description, int attempts,
-	                              long delayMs) throws IOException {
+	static Response sendWithRetry(ApiCall call, String description, int attempts, long delayMs) throws IOException {
 		if (attempts < 1) {
 			throw new IllegalArgumentException("Retry attempts must be at least 1, was " + attempts);
 		}

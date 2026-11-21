@@ -57,7 +57,11 @@ public class PlaceApiStepDefinition {
 	public void thePlaceCreatedMapsToUsing(String name, String apiEndPoint) throws IOException {
 		testContext.setPlaceId(getJsonPath(testContext.getResponse(), GlobalEnum.ADD_PLACE.getCreatedIdPath()));
 		testContext.setRequestSpecification(new PlaceApi().getPlaceRequest(testContext.getPlaceId()));
+
+		logInformation("Get the created place " + testContext.getPlaceId() + " with " + apiEndPoint);
 		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
+
+		logInformation("Verify the created place can be fetched");
 		assertHttpOk(testContext.getResponse());
 
 		logInformation("Verify that the place name matches the expected value");
@@ -83,6 +87,8 @@ public class PlaceApiStepDefinition {
 	@Then("the deleted place can no longer be fetched using {string}")
 	public void theDeletedPlaceCanNoLongerBeFetchedUsing(String apiEndPoint) throws IOException {
 		testContext.setRequestSpecification(new PlaceApi().getPlaceRequest(testContext.getPlaceId()));
+
+		logInformation("Get the deleted place " + testContext.getPlaceId() + " with " + apiEndPoint);
 		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
 
 		logInformation("Verify the deleted place is not found");

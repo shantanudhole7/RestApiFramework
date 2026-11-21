@@ -7,8 +7,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static Assertion.Assertions.assertHttpStatus;
 import static Assertion.Assertions.assertEquals;
+import static Assertion.Assertions.assertHttpStatus;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
@@ -61,6 +61,7 @@ public class RetryTest {
 		assertEquals("Verify API call was sent once", 1, calls.get());
 		assertHttpStatus(response, HTTP_BAD_REQUEST);
 	}
+
 	/** A server error on every attempt: Retry stops after the last attempt and returns that 5xx. */
 	@Test
 	public void returnsLastServerErrorWhenAttemptsRunOut() throws IOException {
@@ -111,7 +112,7 @@ public class RetryTest {
 			calls.incrementAndGet();
 			return response(HTTP_UNAVAILABLE);
 		};
-		assertEquals("Verify the call was never sent", 0, calls.get());
 		assertThrows(IllegalArgumentException.class, () -> Retry.sendWithRetry(call, TEST_CALL, 0, DELAY_MS));
+		assertEquals("Verify the call was never sent", 0, calls.get());
 	}
 }

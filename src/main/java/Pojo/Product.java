@@ -112,13 +112,13 @@ public class Product {
 		return this;
 	}
 
-	/** @return path of the image file to upload, relative to the project root */
+	/** @return absolute path of the image file to upload */
 	public String getProductImage() {
 		return productImage;
 	}
 
 	/**
-	 * @param productImage path of the image file to upload
+	 * @param productImage absolute path of the image file to upload, e.g. from ProductApiDataBuilder
 	 * @return this Product, for chaining
 	 */
 	public Product setProductImage(String productImage) {

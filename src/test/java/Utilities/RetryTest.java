@@ -111,7 +111,7 @@ public class RetryTest {
 			calls.incrementAndGet();
 			return response(HTTP_UNAVAILABLE);
 		};
-		assertEquals("Verify the call was never sent", 0, calls.get());
 		assertThrows(IllegalArgumentException.class, () -> Retry.sendWithRetry(call, TEST_CALL, 0, DELAY_MS));
+		assertEquals("Verify the call was never sent", 0, calls.get());
 	}
 }

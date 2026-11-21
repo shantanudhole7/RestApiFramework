@@ -11,7 +11,7 @@ import java.nio.file.Paths;
  */
 public class ProductApiDataBuilder {
 
-	/** Image uploaded with every test product, on the test classpath (src/test/resources/files): a clearly fake picture. */
+	/** Image uploaded with every test product, from the classpath (src/test/resources/files). */
 	private static final String PRODUCT_IMAGE = "files/product.jpeg";
 
 	/** Name of the default product, created as setup for scenarios that only need a product to exist. */
@@ -73,12 +73,14 @@ public class ProductApiDataBuilder {
 	 * @throws IllegalStateException if the image is not on the classpath
 	 */
 	private static String productImagePath() {
-		URL image = ProductApiDataBuilder.class.getClassLoader().getResource(PRODUCT_IMAGE);
+		URL image = ProductApiDataBuilder.class.getClassLoader()
+		                                       .getResource(PRODUCT_IMAGE);
 		if (image == null) {
 			throw new IllegalStateException(PRODUCT_IMAGE + " not found on the classpath (src/test/resources)");
 		}
 		try {
-			return Paths.get(image.toURI()).toString();
+			return Paths.get(image.toURI())
+			            .toString();
 		} catch (URISyntaxException e) {
 			throw new IllegalStateException("Invalid path for " + PRODUCT_IMAGE, e);
 		}

@@ -205,3 +205,5 @@ Add one line per decision so future sessions keep it.
 - 2026-11-20: Framework logic that the live API can't trigger (retries, failure paths) gets JUnit unit tests with fake
   responses (`ResponseBuilder`), in the same package as the class they test (`Utilities/RetryTest`), so they can reach
   package-private methods. Revisit when framework code moves to `src/main/java` (planned `refactor/maven-layout`).
+- 2026-11-21: Every Api class (Place, Product, Order) builds the unsent requests its steps use (`getPlaceRequest`); steps
+  never call `given()` themselves, so a request is built in one place.

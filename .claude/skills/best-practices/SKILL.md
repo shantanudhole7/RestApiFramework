@@ -271,8 +271,9 @@ Feature: Place API
 - Hooks depend on `TestContext`, Api classes, data builders and Setup classes, never on step classes. When a hook creates
   data a step uses, add a `#` comment in the scenario that names the hook.
 - A setup hook verifies its own call (`assertHttpOk`), so a failed setup fails in the hook and skips the steps.
-- `Api` classes (`PlaceApi`) send one request each (`addPlace`, `deletePlace`) from the shared specs and return
-  the `Response`: no state, no assertions. Endpoints come from `GlobalEnum` constants (`GlobalEnum.ADD_PLACE`),
+- `Api` classes build the unsent requests their steps use (`getPlaceRequest`, `getOrderRequest`) and send requests for
+  hooks (`addPlace`, `deletePlace`), reusing those builders and returning the `Response`: no state, no assertions.
+  Steps never call `given()` themselves. Endpoints come from `GlobalEnum` constants (`GlobalEnum.ADD_PLACE`),
   not strings.
 - `ApiClient` is injected (PicoContainer), not static, because it uses the scenario's `TestContext`.
   Shared classes (`ApiClient`, `CommonStepDefinition`) contain no resource-specific conditions.

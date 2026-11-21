@@ -269,8 +269,10 @@ public void createPlaceForDelete() throws IOException {
 }
 ```
 
-Hooks call the API through `Api/PlaceApi`, not through step methods. `PlaceApi` sends one request from the shared
-specs and returns the `Response`; it keeps no state and makes no assertions, so the caller decides what to check.
+Hooks call the API through `Api/PlaceApi`, not through step methods. Like `ProductApi` and `OrderApi`, `PlaceApi`
+builds unsent requests for steps (`addPlaceRequest`, `getPlaceRequest`, `deletePlaceRequest`) and sends them for hooks
+(`addPlace`, `deletePlace`), reusing the same builders. It keeps no state and makes no assertions, so the caller decides
+what to check.
 
 After every scenario, passed or failed, an untagged `@After` hook deletes every place the scenario created. Places
 are registered in `TestContext` the moment they are created (by `ApiClient` after any call to an endpoint that declares an id path,
@@ -331,7 +333,7 @@ Feature: Place API
 
 Each step maps to a method in `PlaceApiStepDefinition` by its exact text or, for the generic steps (`User calls…`, `status code`, `response body`), `CommonStepDefinition`:
 
-- **Given** builds the request from the shared spec and a `PlaceApiDataBuilder` payload.
+- **Given** gets the request from `PlaceApi` (built from the shared spec and a `PlaceApiDataBuilder` payload).
 - **When** resolves the endpoint name through `GlobalEnum` and sends the request through `ApiClient`.
 - **Then** verifies the response with `Assertions`.
 - **`the place created maps to "<Name>" using "GET_PLACE"`** reads `place_id` from the response, calls `GET_PLACE`

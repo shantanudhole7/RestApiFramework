@@ -1,6 +1,7 @@
 package StepDefinition;
 
 import Api.ApiClient;
+import Api.PlaceApi;
 import ApiDataBuilder.PlaceApiDataBuilder;
 import Context.TestContext;
 import Resources.GlobalEnum;
@@ -14,9 +15,7 @@ import static Assertion.Assertions.assertEquals;
 import static Assertion.Assertions.assertHttpNotFound;
 import static Assertion.Assertions.assertHttpOk;
 import static Logger.Log.logInformation;
-import static Specification.Specifications.defaultRequestSpecification;
 import static Utilities.ResponseUtils.getJsonPath;
-import static io.restassured.RestAssured.given;
 
 /**
  * Step definitions for the Place API feature.
@@ -41,11 +40,9 @@ public class PlaceApiStepDefinition {
 	public void addPlacePayloadWith(String name, String address, String phoneNumber, String language, String website,
 	                                String types) throws IOException {
 		PlaceApiDataBuilder placeApiDataBuilder = new PlaceApiDataBuilder();
-		logInformation("Build Add Place payload for '" + name + "'");
-		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
-		                                           .body(placeApiDataBuilder.addPlacePayload(name, address, phoneNumber,
-		                                                                                     language, website,
-		                                                                                     types)));
+		logInformation("Build Add Place request for '" + name + "'");
+		testContext.setRequestSpecification(new PlaceApi().addPlaceRequest(
+				placeApiDataBuilder.addPlacePayload(name, address, phoneNumber, language, website, types)));
 	}
 
 	/**
@@ -61,10 +58,7 @@ public class PlaceApiStepDefinition {
 		testContext.setPlaceId(getJsonPath(testContext.getResponse(), GlobalEnum.ADD_PLACE.getCreatedIdPath()));
 
 		logInformation("Add place_id to the request specification for the next API call");
-		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
-		                                           .queryParam("place_id", testContext.getPlaceId()));
-
-		logInformation("Get the created place " + testContext.getPlaceId() + " with " + apiEndPoint);
+		testContext.setRequestSpecification(new PlaceApi().getPlaceRequest(testContext.getPlaceId()));
 		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
 		assertHttpOk(testContext.getResponse());
 
@@ -73,15 +67,12 @@ public class PlaceApiStepDefinition {
 	}
 
 	/**
-	 * Build the Delete Place body for the place_id set by the @DeletePlace hook (PlaceHooks.createPlaceForDelete).
+	 * Build the Delete Place request for the place_id set by the @DeletePlace hook (PlaceHooks.createPlaceForDelete).
 	 */
 	@Given("Delete Place payload for the created place")
 	public void deletePlacePayloadForTheCreatedPlace() throws IOException {
-		PlaceApiDataBuilder placeApiDataBuilder = new PlaceApiDataBuilder();
-		logInformation("Build Delete Place payload for place " + testContext.getPlaceId());
-		String deletePlacePayload = placeApiDataBuilder.deletePlacePayload(testContext.getPlaceId());
-		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
-		                                           .body(deletePlacePayload));
+		logInformation("Build Delete Place request for place " + testContext.getPlaceId());
+		testContext.setRequestSpecification(new PlaceApi().deletePlaceRequest(testContext.getPlaceId()));
 	}
 
 	/**
@@ -94,10 +85,7 @@ public class PlaceApiStepDefinition {
 	@Then("the deleted place can no longer be fetched using {string}")
 	public void theDeletedPlaceCanNoLongerBeFetchedUsing(String apiEndPoint) throws IOException {
 		logInformation("Add place_id to the request specification for the next API call");
-		testContext.setRequestSpecification(given().spec(defaultRequestSpecification())
-		                                           .queryParam("place_id", testContext.getPlaceId()));
-
-		logInformation("Get the deleted place " + testContext.getPlaceId() + " with " + apiEndPoint);
+		testContext.setRequestSpecification(new PlaceApi().getPlaceRequest(testContext.getPlaceId()));
 		apiClient.send(GlobalEnum.valueOf(apiEndPoint), Method.GET);
 
 		logInformation("Verify the deleted place is not found");

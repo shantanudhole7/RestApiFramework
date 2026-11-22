@@ -108,6 +108,25 @@ public class ProductApi {
 	}
 
 	/**
+	 * List every product in the store: the admin catalogue and products users added (productAddedBy is their user id).
+	 *
+	 * @param session the logged-in session
+	 * @return response of the Get All Products call; the products are in "data"
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public Response getAllProducts(AuthSession session) throws IOException {
+		logInformation("Get all products with " + GlobalEnum.GET_ALL_PRODUCTS);
+		return given().spec(ecomRequestSpecification())
+		              .header(AUTHORIZATION_HEADER, session.getToken())
+		              .when()
+		              .post(GlobalEnum.GET_ALL_PRODUCTS.getResource())
+		              .then()
+		              .spec(defaultResponseSpecification())
+		              .extract()
+		              .response();
+	}
+
+	/**
 	 * Build a request for one product: the e-commerce spec, the session's token and the productId path parameter.
 	 * Shared by getProductRequest and deleteProductRequest, whose requests are built the same way.
 	 *

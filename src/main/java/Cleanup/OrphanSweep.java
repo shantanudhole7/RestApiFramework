@@ -55,7 +55,8 @@ public final class OrphanSweep {
 				return;
 			}
 			sweepProducts(session, now, minAge);
-		} catch (Exception e) {
+		} catch (Exception | AssertionError e) {
+			// AssertionError too: the shared response spec throws it for a non-JSON response (e.g. an HTML 502)
 			logWarning("Orphan sweep failed unexpectedly: " + e.toString());
 		}
 	}

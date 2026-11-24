@@ -34,6 +34,7 @@ RestApiFramework/
 │   │   │                                 # LoginApi logs in once per run and shares the session
 │   │   ├── ApiDataBuilder/               # One Test Data Builder per API (<Name>ApiDataBuilder): custom or default payloads
 │   │   ├── Assertion/                    # Logging assertions (PASS/FAIL) and HTTP status checks; no test library
+│   │   ├── Cleanup/                      # OrphanSweep: deletes test data that earlier runs left behind
 │   │   ├── Context/                      # TestContext (per-scenario state), AuthSession (the run's session)
 │   │   ├── Logger/                       # The shared logger: logInformation, logWarning, logError
 │   │   ├── Pojo/                         # Request models (JSON via Jackson; Product is sent as multipart)
@@ -48,12 +49,14 @@ RestApiFramework/
 │       │   ├── cucumber/Options/
 │       │   │   └── TestRunner.java       # JUnit runner: features path, glue, report plugins
 │       │   ├── StepDefinition/           # One step class per API (<Name>ApiStepDefinition), plus Common and Login steps
-│       │   │   └── Hooks/                # One hook class per API (<Name>Hooks): setup by tag, cleanup after every scenario
-│       │   └── Utilities/                # Unit tests of framework code, in the package they test (RetryTest)
+│       │   │   └── Hooks/                # One hook class per API (<Name>Hooks): setup by tag, cleanup after every scenario;
+│       │   │                             # CommonHooks: once per run, before all scenarios (the orphan sweep)
+│       │   ├── Cleanup/                  # Unit tests of framework code, in the package they test (OrphanSweepTest)
+│       │   └── Utilities/                # (RetryTest)
 │       └── resources/                    # Non-Java files the tests read, loaded from the classpath
 │           ├── features/                 # One feature file per API (<Name>Api.feature)
 │           ├── files/                    # Test files, e.g. the placeholder image uploaded by Create Product
-│           ├── Global.properties         # Settings: base URI, API key, cleanup retry
+│           ├── Global.properties         # Settings: base URI, API key, cleanup retry, orphan sweep age
 │           ├── secrets.properties.example   # Template for the git-ignored secrets.properties
 │           ├── logback-test.xml          # Log format and outputs
 │           └── allure.properties         # Allure results folder
@@ -119,14 +122,14 @@ SUCCESS**.
 ## Running Tests
 
 Config and feature files are loaded from the classpath, so tests can be started from any folder. The scenarios call
-the live practice API; the unit tests (`RetryTest`) don't call any API.
+the live practice API; the unit tests (`RetryTest`, `OrphanSweepTest`) don't call any API.
 
 | Goal                  | Command                                                       |
 |-----------------------|---------------------------------------------------------------|
 | All scenarios         | `mvn test`, or run `TestRunner` in IntelliJ                   |
 | By tag                | `mvn test -Dcucumber.filter.tags="@AddPlace"`                 |
 | One scenario          | Green arrow next to the scenario in the `.feature` file       |
-| Unit tests            | Green arrow next to `RetryTest`; `mvn test` runs them too     |
+| Unit tests            | Green arrow next to `RetryTest` or `OrphanSweepTest`; `mvn test` runs them too |
 
 Tags: `@PlaceApi`, `@ProductApi` and `@OrderApi` (every scenario of that API), `@AddPlace`, `@DeletePlace`,
 `@CreateProduct`, `@DeleteProduct`, `@CreateOrder`, `@DeleteOrder`, `@Smoke`.
@@ -306,6 +309,27 @@ When a delete itself fails, cleanup still never fails the scenario:
   (`markCleanupFailed`), and runs first because of `@After(order = 20000)`.
 - The retry rules are covered by unit tests (`Utilities/RetryTest`) with fake responses, because the live API can't be
   made to fail on demand.
+
+### Orphan sweep
+
+Per-scenario cleanup can still leave data behind: a run stopped halfway, or a delete that failed every retry. Once per
+run, before the first scenario, `CommonHooks` (`@BeforeAll`) runs `Cleanup/OrphanSweep`, which deletes what earlier runs
+left on the e-commerce API. It deletes only what is certainly test data from this framework; anything uncertain is kept:
+
+- **Ours:** a product must be added by the logged-in test user (`productAddedBy`) **and** have a name starting with
+  `ProductApiDataBuilder.TEST_PRODUCT_PREFIX` (`Test Product`). The data builder refuses any other product name, so
+  every product the tests create carries the prefix. Orders are checked by prefix only, because the order list is
+  already the test user's own.
+- **Old enough:** the first 8 hex characters of a MongoDB id are its creation time, so only data older than
+  `sweep.min.age.minutes` (30, in `Global.properties`) is deleted. A run in progress on another machine is never touched.
+- **Orders first:** if any order can't be deleted, the products are kept, so no order is left pointing at a deleted
+  product.
+- **Never fails the run:** a failed login, fetch or delete is logged as a warning, and the run goes on. Deletes go
+  through `Retry.sendWithRetry`, like the per-scenario cleanup.
+- **Logs ids and names only**, never whole orders: an order holds the account's email address.
+
+The sweep's lines start with `Orphan sweep:`, for example `Orphan sweep: deleted 1 product(s), 0 failed`. The selection
+rules are covered by unit tests (`Cleanup/OrphanSweepTest`) with fake ids and a fixed clock.
 
 ### Scenarios and step definitions
 

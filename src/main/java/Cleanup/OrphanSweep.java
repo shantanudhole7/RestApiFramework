@@ -125,6 +125,11 @@ public final class OrphanSweep {
 		int failedOrders = 0;
 		OrderApi orderApi = new OrderApi();
 		Response ordersResponse = orderApi.getCustomerOrders(session);
+		int orderResponseStatus = ordersResponse.statusCode();
+		if (orderResponseStatus != HTTP_OK) {
+			logWarning("Orphan sweep: could not fetch orders, status " + orderResponseStatus + ", sweep skipped");
+			return 0;
+		}
 		List<Map<String, Object>> orders = ordersResponse.jsonPath()
 		                                                 .getList("data");
 		if (orders == null) {
@@ -168,6 +173,11 @@ public final class OrphanSweep {
 		int failedProducts = 0;
 		ProductApi productApi = new ProductApi();
 		Response productResponse = productApi.getAllProducts(session);
+		int productResponseStatus = productResponse.statusCode();
+		if (productResponseStatus != HTTP_OK) {
+			logWarning("Orphan sweep: could not fetch products, status " + productResponseStatus + ", sweep skipped");
+			return 0;
+		}
 		List<Map<String, Object>> products = productResponse.jsonPath()
 		                                                    .getList("data");
 		if (products == null) {

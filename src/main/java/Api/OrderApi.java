@@ -12,7 +12,7 @@ import java.io.IOException;
 import static Logger.Log.logInformation;
 import static Specification.Specifications.AUTHORIZATION_HEADER;
 import static Specification.Specifications.defaultResponseSpecification;
-import static Specification.Specifications.ecomRequestSpecification;
+import static Specification.Specifications.ecomStatusOnlyRequestSpecification;
 import static io.restassured.RestAssured.given;
 
 /** Builds and sends Order API requests with the session's token; callers assert. */
@@ -117,16 +117,16 @@ public class OrderApi {
 	}
 
 	/**
-	 * Build the part every Order request shares: the e-commerce spec and the session's token.
-	 * Delete adds the orderId path parameter, Get Orders for Customer the userId path parameter, and Get the id
-	 * query parameter.
+	 * Build the part every Order request shares: the status-only e-commerce spec (Order API responses hold the
+	 * account email, so only their status is logged) and the session's token. Create adds the JSON body, Delete the
+	 * orderId path parameter, Get Orders for Customer the userId path parameter, and Get the id query parameter.
 	 *
 	 * @param session the logged-in session
 	 * @return the prepared request, not yet sent
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
 	private RequestSpecification orderRequest(AuthSession session) throws IOException {
-		return given().spec(ecomRequestSpecification())
+		return given().spec(ecomStatusOnlyRequestSpecification())
 		              .header(AUTHORIZATION_HEADER, session.getToken());
 	}
 }

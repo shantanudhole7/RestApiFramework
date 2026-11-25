@@ -26,6 +26,8 @@ import static Utilities.ConfigReader.getPropertiesValue;
  * Each spec is built once per run and reused. The default spec logs every request and response to
  * requestLogs.txt and Allure; the login spec logs nothing, because it carries credentials.
  * The e-commerce spec logs too, with the Authorization header masked.
+ * The status-only e-commerce spec logs only the response status and attaches nothing to Allure,
+ * for responses that carry personal data
  */
 public final class Specifications {
 
@@ -49,6 +51,9 @@ public final class Specifications {
 
 	/** E-commerce API request specification; built on first use, then reused. */
 	private static RequestSpecification ecomRequestSpecification;
+
+	/** E-commerce spec for responses that carry personal data: response status only, no Allure; built once. */
+	private static RequestSpecification ecomStatusOnlyRequestSpecification;
 
 	private Specifications() {
 		// Prevent instantiation of this utility class
@@ -128,6 +133,28 @@ public final class Specifications {
 	}
 
 	/**
+	 * Build a config that masks the Authorization header wherever REST Assured logs (Allure, log()).
+	 *
+	 * @return the masked RestAssuredConfig
+	 */
+	private static RestAssuredConfig maskedConfig() {
+		return RestAssuredConfig.config()
+		                        .logConfig(LogConfig.logConfig()
+		                                            .blacklistHeader(AUTHORIZATION_HEADER));
+	}
+
+	/**
+	 * Build a request logger that writes every request to requestLogs.txt with the Authorization header masked.
+	 *
+	 * @return the masked RequestLoggingFilter
+	 * @throws IOException if requestLogs.txt cannot be created
+	 */
+	private static RequestLoggingFilter maskedRequestLogging() throws IOException {
+		return new RequestLoggingFilter(LogDetail.ALL, true, requestLogStream(), true,
+		                                Collections.singleton(AUTHORIZATION_HEADER));
+	}
+
+	/**
 	 * Build the e-commerce API request specification: base URI, request/response logging to requestLogs.txt and
 	 * the Allure report, with the Authorization header masked in both. No content type, because product requests
 	 * are multipart; the caller adds the Authorization header from the logged-in session.
@@ -138,17 +165,9 @@ public final class Specifications {
 	 */
 	public static synchronized RequestSpecification ecomRequestSpecification() throws IOException {
 		if (ecomRequestSpecification == null) {
-			RestAssuredConfig maskedAllureConfig = RestAssuredConfig.config()
-			                                                        .logConfig(LogConfig.logConfig()
-			                                                                            .blacklistHeader(
-					                                                                            AUTHORIZATION_HEADER));
-			RequestLoggingFilter maskedRequestLogging = new RequestLoggingFilter(LogDetail.ALL, true,
-			                                                                     requestLogStream(), true,
-			                                                                     Collections.singleton(
-					                                                                     AUTHORIZATION_HEADER));
 			ecomRequestSpecification = new RequestSpecBuilder().setBaseUri(getPropertiesValue("api.base.uri"))
-			                                                   .setConfig(maskedAllureConfig)
-			                                                   .addFilter(maskedRequestLogging)
+			                                                   .setConfig(maskedConfig())
+			                                                   .addFilter(maskedRequestLogging())
 			                                                   .addFilter(ResponseLoggingFilter.logResponseTo(
 					                                                   requestLogStream()))
 			                                                   .addFilter(new AllureRestAssured())
@@ -156,5 +175,26 @@ public final class Specifications {
 			logInformation("E-commerce request specification created");
 		}
 		return ecomRequestSpecification;
+	}
+
+	/**
+	 * Build the e-commerce request specification for responses that carry personal data (the Order API's responses
+	 * hold the account email): the request is logged with the token masked, the response only by its status line, and
+	 * nothing is attached to Allure, which has no way to hide one field. Built once per run and reused.
+	 *
+	 * @return the status-only e-commerce RequestSpecification
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public static synchronized RequestSpecification ecomStatusOnlyRequestSpecification() throws IOException {
+		if (ecomStatusOnlyRequestSpecification == null) {
+			ecomStatusOnlyRequestSpecification = new RequestSpecBuilder().setBaseUri(getPropertiesValue("api.base.uri"))
+			                                                             .setConfig(maskedConfig())
+			                                                             .addFilter(maskedRequestLogging())
+			                                                             .addFilter(new ResponseLoggingFilter(
+					                                                             LogDetail.STATUS, requestLogStream()))
+			                                                             .build();
+			logInformation("E-commerce status-only request specification created");
+		}
+		return ecomStatusOnlyRequestSpecification;
 	}
 }

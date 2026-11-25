@@ -117,10 +117,12 @@ src/
 ## 6. Requests and responses
 
 - Every request starts from one of the shared specs (`defaultRequestSpecification()` for Place,
-  `ecomRequestSpecification()` for the e-commerce API, `loginRequestSpecification()` for login), never a new one.
+  `ecomRequestSpecification()` for Product, `ecomStatusOnlyRequestSpecification()` for Order,
+  `loginRequestSpecification()` for login), never a new one.
 - Each spec is built once per run and reused. `defaultRequestSpecification()` (Place: API key, JSON, logging, Allure),
-  `ecomRequestSpecification()` (e-commerce: logging and Allure, no content type for multipart) and
-  `loginRequestSpecification()` (JSON only, no logging, because it carries credentials). Logged specs share one stream
+  `ecomRequestSpecification()` (e-commerce: logging and Allure, no content type for multipart),
+  `ecomStatusOnlyRequestSpecification()` (e-commerce, for responses that carry personal data: request logged, response
+  status only, no Allure) and `loginRequestSpecification()` (JSON only, no logging, because it carries credentials). Logged specs share one stream
   to requestLogs.txt.
 - The e-commerce spec masks the `Authorization` header with two separate settings: a `RequestLoggingFilter` blacklist
   for requestLogs.txt and a `LogConfig` blacklist for Allure. Send the header with `Specifications.AUTHORIZATION_HEADER`,
@@ -335,6 +337,9 @@ Feature: Place API
   Never add it per request; every call already gets it from the shared spec.
 - Never put real secrets in requests that are attached to the report: mask them first. The current `api.key` is
   the public demo key.
+- A response that carries personal data (an email, a name, an address) is never logged in full or attached to Allure:
+  its API builds requests on `ecomStatusOnlyRequestSpecification()` (status line only). Decide per API, not per call.
+  The masked config and request logger come from `maskedConfig()` and `maskedRequestLogging()`, never copied.
 - Allure modules are versioned through `allure-bom` (one `allure.version` property). The project stays on the
   Allure Java 2.x line until the pom targets Java 17, which Allure 3 requires.
 

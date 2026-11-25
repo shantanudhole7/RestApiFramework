@@ -197,16 +197,22 @@ The HTTP method comes from the feature text (`"POST"`, `"GET"`, case-insensitive
 `request(Method, path)`, so every method works without a branch per method. An unknown method fails with
 `Unsupported HTTP method`.
 
-`Specifications` has three request specs:
+`Specifications` has four request specs:
 
-| Spec                            | Used for    | What it adds                                                                           |
-|---------------------------------|-------------|----------------------------------------------------------------------------------------|
-| `defaultRequestSpecification()` | Place API   | API key, JSON, logging to `requestLogs.txt`, Allure                                    |
-| `ecomRequestSpecification()`    | Product API | Logging and Allure with the `Authorization` header masked; no content type (multipart) |
-| `loginRequestSpecification()`   | Login       | JSON only: no logging and no report, so credentials never reach a file                 |
+| Spec                                   | Used for    | What it adds                                                                           |
+|----------------------------------------|-------------|----------------------------------------------------------------------------------------|
+| `defaultRequestSpecification()`        | Place API   | API key, JSON, logging to `requestLogs.txt`, Allure                                    |
+| `ecomRequestSpecification()`           | Product API | Logging and Allure with the `Authorization` header masked; no content type (multipart) |
+| `ecomStatusOnlyRequestSpecification()` | Order API   | Request logged (token masked), response only by its status line, no Allure             |
+| `loginRequestSpecification()`          | Login       | JSON only: no logging and no report, so credentials never reach a file                 |
 
 The token is masked by two settings, because each output reads its own: a `RequestLoggingFilter` blacklist for
-`requestLogs.txt` and a `LogConfig` blacklist for Allure.
+`requestLogs.txt` and a `LogConfig` blacklist for Allure. Both e-commerce specs build them with the same private
+helpers (`maskedConfig()`, `maskedRequestLogging()`), so the mask exists once.
+
+Order API responses hold the account's email address (`orderBy`), so the Order API uses the status-only spec: its
+responses are never written to `requestLogs.txt` or attached to the Allure report. The tests still read the full
+response; logging filters only write a copy. To see an order response while debugging, repeat the call in Postman.
 
 ### Request bodies
 

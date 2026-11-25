@@ -272,7 +272,7 @@ public final class OrphanSweep {
 	/**
 	 * Check whether an order still protects the product it references.
 	 *
-	 * @param isOrderGone        true if the order was successfully deleted or was already gone
+	 * @param isOrderGone      true if the order was successfully deleted or was already gone
 	 * @param productOrderedId the product ID referenced by the order
 	 * @return true if the order remains and has a product ID
 	 */

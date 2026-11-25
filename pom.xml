@@ -97,7 +97,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Reporting Labs API recording; its filter is added to the Place and Product specs (Specifications) -->
+        <!-- Reporting Labs API recording; records every REST Assured call (global filter), masked via reporting-labs.properties -->
         <dependency>
             <groupId>dev.reportinglabs</groupId>
             <artifactId>reporting-labs-rest-assured</artifactId>

@@ -10,8 +10,11 @@ import io.restassured.response.Response;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static Api.OrderApi.ORDER_NOT_FOUND_MESSAGE;
 import static Api.ProductApi.PRODUCT_NOT_FOUND_MESSAGE;
@@ -39,7 +42,8 @@ public final class OrphanSweep {
 	}
 
 	/**
-	 * Delete our old test orders, then our old test products; never throws, logs a warning instead.
+	 * Delete our old test orders, then our old test products that no remaining order references; never throws,
+	 * logs a warning instead.
 	 *
 	 * @param session the run's e-commerce session
 	 */
@@ -49,12 +53,12 @@ public final class OrphanSweep {
 			Duration minAge = Duration.ofMinutes(minAgeMinutes);
 			Instant now = Instant.now();
 
-			int failedOrders = sweepOrders(session, now, minAge);
-			if (failedOrders > 0) {
-				logWarning("Orphan sweep: " + failedOrders + " order(s) could not be deleted, products kept");
+			Optional<Set<String>> referencedProductIds = sweepOrders(session, now, minAge);
+			if (!referencedProductIds.isPresent()) {
+				logWarning("Orphan sweep: orders could not be read, products kept");
 				return;
 			}
-			sweepProducts(session, now, minAge);
+			sweepProducts(session, now, minAge, referencedProductIds.get());
 		} catch (Exception | AssertionError e) {
 			// AssertionError too: the shared response spec throws it for a non-JSON response (e.g. an HTML 502)
 			logWarning("Orphan sweep failed unexpectedly: " + e.toString());
@@ -118,28 +122,32 @@ public final class OrphanSweep {
 	 * @param session the run's e-commerce session
 	 * @param now     the fixed current time used for evaluation
 	 * @param minAge  the minimum age required for cleanup
-	 * @return the number of orders that could not be deleted
+	 * @return the product ids that remaining orders still reference, or empty if the orders could not be read
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
-	private static int sweepOrders(AuthSession session, Instant now, Duration minAge) throws IOException {
+	private static Optional<Set<String>> sweepOrders(AuthSession session, Instant now,
+	                                                 Duration minAge) throws IOException {
 		int deletedOrders = 0;
 		int failedOrders = 0;
+		Set<String> referencedProductIds = new HashSet<>();
 		OrderApi orderApi = new OrderApi();
 		Response ordersResponse = orderApi.getCustomerOrders(session);
-		int orderResponseStatus = ordersResponse.statusCode();
-		if (orderResponseStatus != HTTP_OK) {
-			logWarning("Orphan sweep: could not fetch orders, status " + orderResponseStatus + ", sweep skipped");
-			return 0;
+		int status = ordersResponse.statusCode();
+		if (status != HTTP_OK) {
+			logWarning("Orphan sweep: could not fetch orders, status " + status + ", order sweep skipped");
+			return Optional.empty();
 		}
 		List<Map<String, Object>> orders = ordersResponse.jsonPath()
 		                                                 .getList("data");
 		if (orders == null) {
-			logWarning("Orphan sweep: no order list in the response, sweep skipped");
-			return 0;
+			logWarning("Orphan sweep: no order list in the response, order sweep skipped");
+			return Optional.empty();
 		}
 		for (Map<String, Object> order : orders) {
 			String orderId = (String) order.get("_id");
 			String productName = (String) order.get("productName");
+			String productOrderedId = (String) order.get("productOrderedId");
+			boolean isDeleted = false;
 			if (isOurTestOrder(productName) && isOldEnough(orderId, now, minAge)) {
 				String item = "order " + orderId + " (" + productName + ")";
 				Response deleteResponse = sendWithRetry(() -> orderApi.deleteOrder(orderId, session),
@@ -148,41 +156,48 @@ public final class OrphanSweep {
 				if (statusCode == HTTP_OK) {
 					logInformation("Orphan sweep: deleted " + item);
 					deletedOrders++;
+					isDeleted = true;
 				} else if (isOrderNotFound(deleteResponse)) {
 					logInformation("Orphan sweep: " + item + " was already gone");
+					isDeleted = true;
 				} else {
 					logWarning("Orphan sweep: could not delete " + item + ", status " + statusCode);
 					failedOrders++;
 				}
 			}
+			if (!isDeleted && productOrderedId != null) {
+				referencedProductIds.add(productOrderedId);
+			}
 		}
 		logInformation("Orphan sweep: deleted " + deletedOrders + " order(s), " + failedOrders + " failed");
-		return failedOrders;
+		return Optional.of(referencedProductIds);
 	}
 
 	/**
 	 * Delete our old test products and log a summary.
 	 *
-	 * @param session the run's e-commerce session
-	 * @param now     the fixed current time used for evaluation
-	 * @param minAge  the minimum age required for cleanup
+	 * @param session              the run's e-commerce session
+	 * @param now                  the fixed current time used for evaluation
+	 * @param minAge               the minimum age required for cleanup
+	 * @param referencedProductIds ids of products that remaining orders still reference; these are kept
 	 * @return the number of products that could not be deleted
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
 	 */
-	private static int sweepProducts(AuthSession session, Instant now, Duration minAge) throws IOException {
+	private static int sweepProducts(AuthSession session, Instant now, Duration minAge,
+	                                 Set<String> referencedProductIds) throws IOException {
 		int deletedProducts = 0;
 		int failedProducts = 0;
 		ProductApi productApi = new ProductApi();
 		Response productResponse = productApi.getAllProducts(session);
-		int productResponseStatus = productResponse.statusCode();
-		if (productResponseStatus != HTTP_OK) {
-			logWarning("Orphan sweep: could not fetch products, status " + productResponseStatus + ", sweep skipped");
+		int status = productResponse.statusCode();
+		if (status != HTTP_OK) {
+			logWarning("Orphan sweep: could not fetch products, status " + status + ", product sweep skipped");
 			return 0;
 		}
 		List<Map<String, Object>> products = productResponse.jsonPath()
 		                                                    .getList("data");
 		if (products == null) {
-			logWarning("Orphan sweep: no product list in the response, sweep skipped");
+			logWarning("Orphan sweep: no product list in the response, product sweep skipped");
 			return 0;
 		}
 		for (Map<String, Object> product : products) {
@@ -192,6 +207,10 @@ public final class OrphanSweep {
 			boolean isOurs = isOurTestProduct(productName, productAddedBy, session.getUserId());
 			if (isOurs && isOldEnough(productId, now, minAge)) {
 				String item = "product " + productId + " (" + productName + ")";
+				if (referencedProductIds.contains(productId)) {
+					logInformation("Orphan sweep: " + item + " kept, an order still references it");
+					continue;
+				}
 				Response deleteResponse = sendWithRetry(() -> productApi.deleteProduct(productId, session),
 				                                        "delete product " + productId);
 				int statusCode = deleteResponse.statusCode();

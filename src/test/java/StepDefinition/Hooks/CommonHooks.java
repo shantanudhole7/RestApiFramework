@@ -23,7 +23,7 @@ public class CommonHooks {
 		try {
 			session = LoginApi.session();
 		} catch (Exception | AssertionError e) {
-			// AssertionError too: the shared response spec throws it for a non-JSON response (e.g. an HTML 502)
+			// AssertionError too: nothing may escape a @BeforeAll
 			logWarning("Orphan sweep skipped: could not log in: " + e);
 			return;
 		}

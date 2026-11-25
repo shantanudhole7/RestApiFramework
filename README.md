@@ -248,8 +248,9 @@ with both values and throws an `AssertionError` on failure:
 19:40:56 | INFO  | PASS | Verify status in response body | Expected: OK | Actual: OK
 ```
 
-`Assertions.assertHttpStatus(response, code)` checks for an exact HTTP status the same way, and also logs the
-response body when the status is wrong, since it usually explains the error. `assertHttpOk(response)` (200) and
+`Assertions.assertHttpStatus(response, code)` checks for an exact HTTP status the same way. When the status is wrong,
+it logs both status codes and points to `requestLogs.txt`, which holds the response unless it carries personal data;
+it never logs the body itself. `assertHttpOk(response)` (200) and
 `assertHttpNotFound(response)` (404) are named shortcuts for it. Steps assert the exact code from the API contract,
 not just "any 2xx".
 
@@ -309,7 +310,7 @@ When a delete itself fails, cleanup still never fails the scenario:
 - **Retry:** each delete goes through `Retry.sendWithRetry`. A server error (5xx) or a network error is retried after
   a short pause, up to `cleanup.retry.attempts` tries with `cleanup.retry.delay.ms` between them (`Global.properties`).
   A 4xx is never retried, because the request itself is wrong. If every try fails, the hook logs a warning with the
-  id, status and body.
+  id and status, plus the body for Place and Product (Order logs the status only: its responses carry personal data).
 - **Keep the parent:** if an order still can't be deleted, `ProductHooks` keeps the scenario's products and logs each
   one, so no order is left pointing at a deleted product. `OrderHooks` leaves that note in `TestContext`
   (`markCleanupFailed`), and runs first because of `@After(order = 20000)`.

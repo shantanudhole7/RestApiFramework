@@ -145,8 +145,8 @@ src/
 
 - Verify only through `Assertions`:
   - `assertEquals(description, expected, actual)` for any value.
-  - `assertHttpStatus(response, code)` for an exact HTTP status; it also logs the response body when the status
-    is wrong. Assert the exact code from the API contract, not just "any 2xx".
+  - `assertHttpStatus(response, code)` for an exact HTTP status; on a wrong status it logs both codes and points to
+    requestLogs.txt; it never logs the body. Assert the exact code from the API contract, not just "any 2xx".
   - `assertHttpOk(response)` (200) and `assertHttpNotFound(response)` (404) are named shortcuts for it. Add a new
     shortcut only for a status that several steps check.
 - All of them log `PASS | ...` or `FAIL | ...` with expected and actual values, then throw an `AssertionError` on failure.
@@ -279,7 +279,7 @@ Feature: Place API
   The untagged `@After` cleanup hook deletes every tracked resource after every scenario, passed or failed.
 - Cleanup never fails a scenario. "Deleted" and "already gone" are logged as info (Place: 200 and 404; products: 200,
   and 400 with "Product not found…"; orders: 200, and 400 with "Order not found"); any other status or exception is logged as a
-  warning with the status and body.
+  warning with the status, plus the body only for APIs without personal data (Place, Product).
 - Hooks depend on `TestContext`, Api classes, data builders and Setup classes, never on step classes. When a hook creates
   data a step uses, add a `#` comment in the scenario that names the hook.
 - A setup hook verifies its own call (`assertHttpOk`), so a failed setup fails in the hook and skips the steps.

@@ -54,7 +54,7 @@ public final class OrphanSweep {
 			Instant now = Instant.now();
 
 			Optional<Set<String>> referencedProductIds = sweepOrders(session, now, minAge);
-			if (!referencedProductIds.isPresent()) {
+			if (referencedProductIds.isEmpty()) {
 				logWarning("Orphan sweep: orders could not be read, products kept");
 				return;
 			}

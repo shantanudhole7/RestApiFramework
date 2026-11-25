@@ -195,6 +195,8 @@ src/
 - Add or upgrade a dependency only in its own pull request, or as part of the feature that needs it,
   and say why in the description.
 - Prefer a current version when adding a dependency; check mvnrepository first.
+- Every build plugin in `pom.xml` has a pinned `<version>`, so Maven never picks a default that differs between
+  machines. To change one, pin the new version in its own commit.
 
 ## 13. Test data
 

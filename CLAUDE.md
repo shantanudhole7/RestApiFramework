@@ -20,8 +20,8 @@ Academy Place API and e-commerce (Product and Order) API. Study project, committ
 ## Environment
 
 - Java 11 or newer (logback-classic requires it), Maven, IntelliJ IDEA.
-- `mvn` is not on the PATH on my machine yet: run Maven from IntelliJ's **Maven tool window → Lifecycle**.
-  The `mvn` commands below work once Maven is installed.
+- Maven is on the PATH; IntelliJ's **Maven tool window → Lifecycle** works too. `pom.xml` compiles for Java 11
+  (`maven.compiler.release`) with UTF-8 sources.
 - Config (`Global.properties`, `secrets.properties`) and feature files are loaded from the classpath, so runs don't
   depend on the working folder.
 
@@ -174,9 +174,8 @@ Test files, `src/test/resources/`:
   `Exception`, so `catch (Exception e)` doesn't stop it; catch `Exception | AssertionError`.
 - The API stores whatever a client sends in an order's `productOrderedId` (a hand-made order holds a date there), so
   never trust its data: the sweep only ever keeps more because of a bad value, never deletes more.
-- `pom.xml` sets no compiler level, so code compiles at Maven's default (below Java 11) even on a newer JDK: Java 11
-  APIs such as `Optional.isEmpty()` don't compile. Use the Java 8 form (`!isPresent()`) until the pom sets
-  `maven.compiler.release`.
+- After changing compiler settings in `pom.xml`, run `mvn clean test-compile`. A plain build recompiles only changed
+  files, so older classes keep the old settings (`Nothing to compile - all classes are up to date`).
 - Get All Products is a POST without a body, so `ProductApi.getAllProducts` sets `ContentType.JSON`: without it REST
   Assured sends its default form charset (ISO-8859-1), which this API rejects with 500.
 
@@ -276,3 +275,5 @@ Add one line per decision so future sessions keep it.
   (`ecomStatusOnlyRequestSpecification()`, used by the whole Order API, whose responses hold the account email). One
   rule per API instead of per call, so a response that later gains personal data is already covered. Allure can't mask
   a single field, so it is left out for those calls.
+- 2026-11-25: `pom.xml` sets `maven.compiler.release` 11 (which also rejects JDK APIs newer than Java 11) and UTF-8
+  sources; build plugins (compiler, surefire) have pinned versions, so every machine builds the same way.

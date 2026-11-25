@@ -109,4 +109,18 @@ public class OrphanSweepTest {
 		boolean result = OrphanSweep.isOldEnough(id, NOW, MIN_AGE);
 		assertEquals("Verify data exactly at minimum age is eligible", true, result);
 	}
+
+	/** An order without a product name is not selected. */
+	@Test
+	public void orderWithoutProductNameIsNeverSwept() {
+		boolean result = OrphanSweep.isOurTestOrder(null);
+		assertEquals("Verify order without product name is not eligible", false, result);
+	}
+
+	/** A product without a name is not selected, even when the owner matches. */
+	@Test
+	public void productWithoutNameIsNeverSwept() {
+		boolean result = OrphanSweep.isOurTestProduct(null, OUR_USER_ID, OUR_USER_ID);
+		assertEquals("Verify product without name is not eligible", false, result);
+	}
 }

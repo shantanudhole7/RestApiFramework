@@ -147,7 +147,7 @@ public final class OrphanSweep {
 			String orderId = readText(order, "_id");
 			String productName = readText(order, "productName");
 			String productOrderedId = readText(order, "productOrderedId");
-			boolean isDeleted = false;
+			boolean isOrderGone = false;
 			if (isOurTestOrder(productName) && isOldEnough(orderId, now, minAge)) {
 				String item = "order " + orderId + " (" + productName + ")";
 				Response deleteResponse = sendWithRetry(() -> orderApi.deleteOrder(orderId, session),
@@ -156,16 +156,16 @@ public final class OrphanSweep {
 				if (statusCode == HTTP_OK) {
 					logInformation("Orphan sweep: deleted " + item);
 					deletedOrders++;
-					isDeleted = true;
+					isOrderGone = true;
 				} else if (isOrderNotFound(deleteResponse)) {
 					logInformation("Orphan sweep: " + item + " was already gone");
-					isDeleted = true;
+					isOrderGone = true;
 				} else {
 					logWarning("Orphan sweep: could not delete " + item + ", status " + statusCode);
 					failedOrders++;
 				}
 			}
-			if (protectsItsProduct(isDeleted, productOrderedId)) {
+			if (protectsItsProduct(isOrderGone, productOrderedId)) {
 				referencedProductIds.add(productOrderedId);
 			}
 		}

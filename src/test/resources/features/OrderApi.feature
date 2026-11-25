@@ -1,11 +1,11 @@
-@OrderApi
+@OrderApi @owner:Shantanu @feature:Order
 Feature: Order API
   Place and delete orders in the e-commerce store as a logged-in user.
 
   Background:
     Given the user is logged in
 
-  @CreateOrder @Smoke
+  @CreateOrder @Smoke @P1 @critical
   Scenario Outline: Create an order and verify it can be fetched
     Given a product exists in the store
     And Place Order payload with country "<Country>"
@@ -19,7 +19,7 @@ Feature: Order API
       | Country |
       | India   |
 
-  @DeleteOrder @Smoke
+  @DeleteOrder @Smoke @P2 @major
   Scenario: Delete an order and verify the delete succeeds
     # The @DeleteOrder hook places the order to delete (OrderHooks.createOrderForDelete)
     Given Delete Order request for the placed order

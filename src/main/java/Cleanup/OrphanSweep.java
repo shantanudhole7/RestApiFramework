@@ -144,9 +144,9 @@ public final class OrphanSweep {
 			return Optional.empty();
 		}
 		for (Map<String, Object> order : orders) {
-			String orderId = (String) order.get("_id");
-			String productName = (String) order.get("productName");
-			String productOrderedId = (String) order.get("productOrderedId");
+			String orderId = readText(order, "_id");
+			String productName = readText(order, "productName");
+			String productOrderedId = readText(order, "productOrderedId");
 			boolean isDeleted = false;
 			if (isOurTestOrder(productName) && isOldEnough(orderId, now, minAge)) {
 				String item = "order " + orderId + " (" + productName + ")";
@@ -165,7 +165,7 @@ public final class OrphanSweep {
 					failedOrders++;
 				}
 			}
-			if (!isDeleted && productOrderedId != null) {
+			if (protectsItsProduct(isDeleted, productOrderedId)) {
 				referencedProductIds.add(productOrderedId);
 			}
 		}
@@ -201,9 +201,9 @@ public final class OrphanSweep {
 			return 0;
 		}
 		for (Map<String, Object> product : products) {
-			String productId = (String) product.get("_id");
-			String productName = (String) product.get("productName");
-			String productAddedBy = (String) product.get("productAddedBy");
+			String productId = readText(product, "_id");
+			String productName = readText(product, "productName");
+			String productAddedBy = readText(product, "productAddedBy");
 			boolean isOurs = isOurTestProduct(productName, productAddedBy, session.getUserId());
 			if (isOurs && isOldEnough(productId, now, minAge)) {
 				String item = "product " + productId + " (" + productName + ")";
@@ -255,5 +255,28 @@ public final class OrphanSweep {
 		}
 		String message = getJsonPath(response, "message");
 		return message != null && message.startsWith(PRODUCT_NOT_FOUND_MESSAGE);
+	}
+
+	/**
+	 * Read a text field from a JSON item; anything that isn't text counts as missing.
+	 *
+	 * @param item the order or product, as read from the response
+	 * @param key  the field name
+	 * @return the field's text, or null if it is missing or not text
+	 */
+	private static String readText(Map<String, Object> item, String key) {
+		Object value = item.get(key);
+		return value instanceof String ? (String) value : null;
+	}
+
+	/**
+	 * Check whether an order still protects the product it references.
+	 *
+	 * @param orderGone        true if the order was successfully deleted or was already gone
+	 * @param productOrderedId the product ID referenced by the order
+	 * @return true if the order remains and has a product ID
+	 */
+	static boolean protectsItsProduct(boolean orderGone, String productOrderedId) {
+		return !orderGone && productOrderedId != null;
 	}
 }

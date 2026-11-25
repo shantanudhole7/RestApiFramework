@@ -123,4 +123,25 @@ public class OrphanSweepTest {
 		boolean result = OrphanSweep.isOurTestProduct(null, OUR_USER_ID, OUR_USER_ID);
 		assertEquals("Verify product without name is not eligible", false, result);
 	}
+
+	/** An order that remains protects its product. */
+	@Test
+	public void orderStillThereProtectsItsProduct() {
+		boolean result = OrphanSweep.protectsItsProduct(false, "product123");
+		assertEquals("Verify an order that remains protects its product", true, result);
+	}
+
+	/** A deleted or already-gone order protects nothing. */
+	@Test
+	public void deletedOrderProtectsNothing() {
+		boolean result = OrphanSweep.protectsItsProduct(true, "product123");
+		assertEquals("Verify a deleted order protects nothing", false, result);
+	}
+
+	/** An order without a product ID protects nothing. */
+	@Test
+	public void orderWithoutProductIdProtectsNothing() {
+		boolean result = OrphanSweep.protectsItsProduct(false, null);
+		assertEquals("Verify an order without a product ID protects nothing", false, result);
+	}
 }

@@ -7,6 +7,10 @@
 
     <properties>
         <allure.version>2.29.1</allure.version>
+        <!-- Language level and target JVM for main and test code; the project needs Java 11+ (logback-classic 1.5+) -->
+        <maven.compiler.release>11</maven.compiler.release>
+        <!-- Read and write source files as UTF-8 on every machine -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencyManagement>

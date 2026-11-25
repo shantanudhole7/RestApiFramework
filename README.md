@@ -322,10 +322,12 @@ left on the e-commerce API. It deletes only what is certainly test data from thi
   already the test user's own.
 - **Old enough:** the first 8 hex characters of a MongoDB id are its creation time, so only data older than
   `sweep.min.age.minutes` (30, in `Global.properties`) is deleted. A run in progress on another machine is never touched.
-- **Orders first:** if any order can't be deleted, the products are kept, so no order is left pointing at a deleted
-  product.
-- **Never fails the run:** a failed login, fetch or delete is logged as a warning, and the run goes on. Deletes go
-  through `Retry.sendWithRetry`, like the per-scenario cleanup.
+- **Orders first, and no product an order still needs:** every order that still exists after the order pass (too young,
+  not a test order, or its delete failed) protects its product (`productOrderedId`), which is kept and logged as
+  `kept, an order still references it`. If the orders can't be read at all, every product is kept.
+- **Never fails the run:** a failed login, fetch or delete is logged as a warning, and the run goes on. The sweep and
+  its hook catch `Exception | AssertionError`, because the shared response spec throws `AssertionError` for a non-JSON
+  response. Deletes go through `Retry.sendWithRetry`, like the per-scenario cleanup.
 - **Logs ids and names only**, never whole orders: an order holds the account's email address.
 
 The sweep's lines start with `Orphan sweep:`, for example `Orphan sweep: deleted 1 product(s), 0 failed`. The selection

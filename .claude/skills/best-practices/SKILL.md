@@ -314,10 +314,11 @@ Feature: Place API
   clock as a parameter (`Instant now`), so a test can fix it (`Cleanup/OrphanSweepTest`).
 - Hooks for the whole run go in `CommonHooks` (`@BeforeAll`, `public static void`, no `TestContext`). They must never
   throw: an exception there aborts the whole run, including scenarios that don't need that API. Wrap only the call that
-  can fail in `try`, so the `catch` message is always true, then log a warning and return.
+  can fail in `try`, so the `catch` message is always true, then log a warning and return. Catch
+  `Exception | AssertionError`: the shared response spec throws `AssertionError`, which `catch (Exception e)` misses.
 - The orphan sweep deletes only what is certainly ours and old enough (owner + `TEST_PRODUCT_PREFIX`, age from the
-  MongoDB id at least `sweep.min.age.minutes`); anything uncertain is kept. Orders go first, and products are kept if
-  any order fails. It logs ids and names only, never whole response bodies: an order holds the account email.
+  MongoDB id at least `sweep.min.age.minutes`); anything uncertain is kept. Orders go first, and a product that any
+  remaining order still references is kept (if the orders can't be read, all products are kept). It logs ids and names only, never whole response bodies: an order holds the account email.
 - Every response status a cleanup or sweep can get has a branch: deleted (info), already gone (info, checked by status
   **and** message), anything else (warning with id and status, counted as a failure). Check the status of a fetch
   before reading its body.

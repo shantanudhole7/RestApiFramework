@@ -155,14 +155,22 @@ Test files, `src/test/resources/`:
 - The orphan sweep (`CommonHooks`, `@BeforeAll`) deletes e-commerce data earlier runs left behind, before the first
   scenario. It deletes only products added by the test user whose name starts with `TEST_PRODUCT_PREFIX`
   ("Test Product"), orders of such products, and only when older than `sweep.min.age.minutes` (from the MongoDB id).
-  Orders go first; if one fails, products are kept. It never fails the run, and logs ids and names only (an order holds
-  the account email). A product you create by hand with a "Test Product…" name will be swept after 30 minutes.
+  Orders go first; a product that a remaining order still references (`productOrderedId`) is kept, and if the orders
+  can't be read, all products are kept. It never fails the run (it catches `Exception | AssertionError`), and logs ids
+  and names only (an order holds the account email). A product you create by hand with a "Test Product…" name will be swept after 30 minutes.
 - `ProductApiDataBuilder.createProductPayload` throws `IllegalArgumentException` for a name without `TEST_PRODUCT_PREFIX`;
   the prefix is what lets the sweep recognise test data.
 - `@BeforeAll` output belongs to no scenario, so the IntelliJ console shows the `Orphan sweep:` lines after the
   scenarios; the real order is in `target/logs/`. During `@BeforeAll` Allure logs `ERROR | Could not add attachment: no
   test is running` for each sweep request: harmless, the request is still sent.
 - `@BeforeAll` can't be filtered by tags: a Place-only run still logs in to the e-commerce API and sweeps.
+- An exception or error that escapes a `@BeforeAll` aborts the whole run. `AssertionError` is an `Error`, not an
+  `Exception`, so `catch (Exception e)` doesn't stop it; catch `Exception | AssertionError`.
+- The API stores whatever a client sends in an order's `productOrderedId` (a hand-made order holds a date there), so
+  never trust its data: the sweep only ever keeps more because of a bad value, never deletes more.
+- `pom.xml` sets no compiler level, so code compiles at Maven's default (below Java 11) even on a newer JDK: Java 11
+  APIs such as `Optional.isEmpty()` don't compile. Use the Java 8 form (`!isPresent()`) until the pom sets
+  `maven.compiler.release`.
 - Get All Products is a POST without a body, so `ProductApi.getAllProducts` sets `ContentType.JSON`: without it REST
   Assured sends its default form charset (ISO-8859-1), which this API rejects with 500.
 
@@ -255,3 +263,6 @@ Add one line per decision so future sessions keep it.
   recognisable without a separate registry.
 - 2026-11-24: A `try` covers only the call whose failure its `catch` message describes; a hook that must never fail the
   run catches everything around the call that can fail, and nothing more.
+- 2026-11-25: The orphan sweep's product rule is "never delete a product that a remaining order references" (replaces
+  "products only if every order is gone"): every order still there after the order pass protects its product, and an
+  unreadable order list keeps all products. A `@BeforeAll` catches `Exception | AssertionError`.

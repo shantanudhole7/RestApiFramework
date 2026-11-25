@@ -11,11 +11,17 @@ import java.nio.file.Paths;
  */
 public class ProductApiDataBuilder {
 
+	/**
+	 * Every product a test creates starts with this name, so the orphan sweep can tell test data from anything
+	 * else on the account.
+	 */
+	public static final String TEST_PRODUCT_PREFIX = "Test Product";
+
 	/** Image uploaded with every test product, from the classpath (src/test/resources/files). */
 	private static final String PRODUCT_IMAGE = "files/product.jpeg";
 
 	/** Name of the default product, created as setup for scenarios that only need a product to exist. */
-	private static final String DEFAULT_PRODUCT_NAME = "Test Product 3";
+	private static final String DEFAULT_PRODUCT_NAME = TEST_PRODUCT_PREFIX + " 3";
 
 	/** Category of the default product. */
 	private static final String DEFAULT_PRODUCT_CATEGORY = "fashion";
@@ -43,9 +49,14 @@ public class ProductApiDataBuilder {
 	 * @param productFor  who the product is for, e.g. "Men"
 	 * @param userId      id of the logged-in user, sent as productAddedBy
 	 * @return Product data, sent as multipart form fields by ProductApi
+	 * @throws IllegalArgumentException if the name does not start with TEST_PRODUCT_PREFIX
 	 */
 	public Product createProductPayload(String name, String category, String subCategory, String description,
 	                                    String price, String productFor, String userId) {
+		if (!name.startsWith(TEST_PRODUCT_PREFIX)) {
+			throw new IllegalArgumentException(
+					"Test product names must start with '" + TEST_PRODUCT_PREFIX + "' so leftovers can be swept: " + name);
+		}
 		return new Product().setProductName(name)
 		                    .setProductCategory(category)
 		                    .setProductSubCategory(subCategory)

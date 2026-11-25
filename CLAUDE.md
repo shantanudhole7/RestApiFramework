@@ -48,6 +48,8 @@ Framework, `src/main/java/`:
 - `Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
   `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404); throws
   `AssertionError` itself, no test library
+- `Cleanup/OrphanSweep` deletes test data that earlier runs left on the e-commerce API (see Gotchas); its selection
+  rules are package-private for the unit tests
 - `Context/` `TestContext` (per-scenario state, injected by cucumber-picocontainer) and `AuthSession` (immutable token
   and user id of the run's e-commerce session)
 - `Logger/Log` shared logger: `logInformation`, `logWarning`, `logError`
@@ -66,8 +68,10 @@ Tests, `src/test/java/`:
 - `StepDefinition/` one step class per API (`<Name>ApiStepDefinition`), plus `CommonStepDefinition` (http call,
   status, response body) and `LoginStepDefinition` (the "the user is logged in" step)
 - `StepDefinition/Hooks/` one hook class per API (`<Name>Hooks`): `@Before("@Delete<Name>")` creates what the Delete
-  scenario deletes; `@After` deletes everything the scenario created
-- `Utilities/RetryTest` unit tests of framework code, in the same package as the class they test
+  scenario deletes; `@After` deletes everything the scenario created. `CommonHooks` holds hooks for the whole run:
+  `@BeforeAll` runs the orphan sweep
+- `Cleanup/OrphanSweepTest`, `Utilities/RetryTest` unit tests of framework code, in the same package as the class they
+  test
 
 Test files, `src/test/resources/`:
 - `features/` one feature file per API (`<Name>Api.feature`)
@@ -141,13 +145,34 @@ Test files, `src/test/resources/`:
 - `cleanup.retry.attempts` must be at least 1 (`Retry` rejects 0, which would otherwise retry forever).
 - "Kept product" depends on hook order: `OrderHooks` (`@After(order = 20000)`) must run before `ProductHooks` to leave
   the `markCleanupFailed` note. Removing that order breaks the protection silently.
-- `RetryTest` runs without the API; `mvn test` runs it together with `TestRunner`.
+- `RetryTest` and `OrphanSweepTest` run without the API; `mvn test` runs them together with `TestRunner`.
 - Config and feature files are read from the build output (`target/test-classes`), which the build copies from
   `src/test/resources`. If an edit seems ignored, run Build → Rebuild Project.
 - Framework code in `src/main/java` can't see test-scoped libraries (Cucumber, JUnit): code that needs them belongs in
   `src/test/java`. A compile error there after moving code means a framework class depends on test code.
 - A unit test of framework code must keep the class's package (`src/test/java/Utilities` for `Utilities.Retry`), or it
   loses access to package-private methods.
+- The orphan sweep (`CommonHooks`, `@BeforeAll`) deletes e-commerce data earlier runs left behind, before the first
+  scenario. It deletes only products added by the test user whose name starts with `TEST_PRODUCT_PREFIX`
+  ("Test Product"), orders of such products, and only when older than `sweep.min.age.minutes` (from the MongoDB id).
+  Orders go first; a product that a remaining order still references (`productOrderedId`) is kept, and if the orders
+  can't be read, all products are kept. It never fails the run (it catches `Exception | AssertionError`), and logs ids
+  and names only (an order holds the account email). A product you create by hand with a "Test Product…" name will be swept after 30 minutes.
+- `ProductApiDataBuilder.createProductPayload` throws `IllegalArgumentException` for a name without `TEST_PRODUCT_PREFIX`;
+  the prefix is what lets the sweep recognise test data.
+- `@BeforeAll` output belongs to no scenario, so the IntelliJ console shows the `Orphan sweep:` lines after the
+  scenarios; the real order is in `target/logs/`. During `@BeforeAll` Allure logs `ERROR | Could not add attachment: no
+  test is running` for each sweep request: harmless, the request is still sent.
+- `@BeforeAll` can't be filtered by tags: a Place-only run still logs in to the e-commerce API and sweeps.
+- An exception or error that escapes a `@BeforeAll` aborts the whole run. `AssertionError` is an `Error`, not an
+  `Exception`, so `catch (Exception e)` doesn't stop it; catch `Exception | AssertionError`.
+- The API stores whatever a client sends in an order's `productOrderedId` (a hand-made order holds a date there), so
+  never trust its data: the sweep only ever keeps more because of a bad value, never deletes more.
+- `pom.xml` sets no compiler level, so code compiles at Maven's default (below Java 11) even on a newer JDK: Java 11
+  APIs such as `Optional.isEmpty()` don't compile. Use the Java 8 form (`!isPresent()`) until the pom sets
+  `maven.compiler.release`.
+- Get All Products is a POST without a body, so `ProductApi.getAllProducts` sets `ContentType.JSON`: without it REST
+  Assured sends its default form charset (ISO-8859-1), which this API rejects with 500.
 
 ## Decisions log
 
@@ -230,3 +255,14 @@ Add one line per decision so future sessions keep it.
 - 2026-11-21: Framework code depends on no test library: `Assertions` throws `AssertionError` itself, so the framework
   works under any test runner. Libraries the framework uses have the default scope; only Cucumber and Allure Cucumber
   stay `test`.
+- 2026-11-24: Leftover test data is removed by an orphan sweep (`Cleanup/OrphanSweep`), run once per run by
+  `CommonHooks` `@BeforeAll` (the first cross-cutting hook). It deletes only what is certainly ours: owner and
+  `TEST_PRODUCT_PREFIX` for products, prefix for orders, and age at least `sweep.min.age.minutes`; anything uncertain
+  is kept. Orders first, products only if every order is gone; it never fails the run.
+- 2026-11-24: Test products carry the `TEST_PRODUCT_PREFIX` name prefix, enforced by the data builder, so test data is
+  recognisable without a separate registry.
+- 2026-11-24: A `try` covers only the call whose failure its `catch` message describes; a hook that must never fail the
+  run catches everything around the call that can fail, and nothing more.
+- 2026-11-25: The orphan sweep's product rule is "never delete a product that a remaining order references" (replaces
+  "products only if every order is gone"): every order still there after the order pass protects its product, and an
+  unreadable order list keeps all products. A `@BeforeAll` catches `Exception | AssertionError`.

@@ -99,8 +99,27 @@ public class OrderApi {
 	}
 
 	/**
+	 * List the logged-in user's orders. An account with no orders gets 200 with an empty "data" list.
+	 *
+	 * @param session the logged-in session; its user id selects the orders
+	 * @return response of the Get Orders for Customer call; the orders are in "data"
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public Response getCustomerOrders(AuthSession session) throws IOException {
+		logInformation("Get the orders of user " + session.getUserId() + " with " + GlobalEnum.GET_CUSTOMER_ORDERS);
+		return orderRequest(session).pathParam("userId", session.getUserId())
+		                            .when()
+		                            .get(GlobalEnum.GET_CUSTOMER_ORDERS.getResource())
+		                            .then()
+		                            .spec(defaultResponseSpecification())
+		                            .extract()
+		                            .response();
+	}
+
+	/**
 	 * Build the part every Order request shares: the e-commerce spec and the session's token.
-	 * Delete adds the orderId path parameter; Get adds the id query parameter.
+	 * Delete adds the orderId path parameter, Get Orders for Customer the userId path parameter, and Get the id
+	 * query parameter.
 	 *
 	 * @param session the logged-in session
 	 * @return the prepared request, not yet sent

@@ -17,6 +17,7 @@ src/
 │   ├── Api/                                    # One class per API (<Name>Api), plus ApiClient and LoginApi
 │   ├── ApiDataBuilder/                         # One Test Data Builder per API (<Name>ApiDataBuilder)
 │   ├── Assertion/Assertions                    # Logging assertions (PASS/FAIL lines), no test library
+│   ├── Cleanup/OrphanSweep                     # Deletes test data that earlier runs left behind
 │   ├── Context/                                # TestContext (per-scenario state), AuthSession (run's session)
 │   ├── Logger/Log                              # The single shared logger
 │   ├── Pojo/                                   # Request models (JSON via Jackson; Product is multipart)
@@ -28,11 +29,13 @@ src/
 │   ├── cucumber/Options/
 │   │   └── TestRunner                          # JUnit runner: classpath:features, glue, report plugins
 │   ├── StepDefinition/                         # One step class per API (<Name>ApiStepDefinition), plus Common and Login
-│   │   └── Hooks/                              # One hook class per API (<Name>Hooks): setup and cleanup
-│   └── Utilities/RetryTest                     # Unit tests, in the package of the class they test
+│   │   └── Hooks/                              # One hook class per API (<Name>Hooks): setup and cleanup;
+│   │                                           # CommonHooks: hooks for the whole run (@BeforeAll orphan sweep)
+│   ├── Cleanup/OrphanSweepTest                 # Unit tests, in the package of the class they test
+│   └── Utilities/RetryTest
 └── test/resources/                             # Non-Java files the tests read, from the classpath
     ├── features/                               # One feature file per API (<Name>Api.feature)
-    ├── Global.properties                       # Settings: base URI, API key, cleanup retry
+    ├── Global.properties                       # Settings: base URI, API key, cleanup retry, sweep age
     ├── secrets.properties.example              # Template for the git-ignored secrets.properties
     ├── files/                                  # Test files (placeholder image for Create Product)
     ├── logback-test.xml                        # Log format and outputs
@@ -196,6 +199,9 @@ src/
 - The repository is public: never use real personal data (names, phone numbers, emails, addresses)
   anywhere in the code or feature files. Use clearly fake values such as `"Test Place 1"`, `9999999999`
   and `https://example.com`.
+- Every product a test creates is named with `ProductApiDataBuilder.TEST_PRODUCT_PREFIX` ("Test Product …");
+  `createProductPayload` rejects any other name. The prefix is how the orphan sweep recognises test data, so never
+  bypass it, and never give a product you create by hand a "Test Product…" name unless the sweep may delete it.
 
 ## 14. Generated files
 
@@ -304,7 +310,20 @@ Feature: Place API
   its data instead.
 - Framework logic the live API can't trigger (retries, failure paths) gets JUnit unit tests with fake responses
   (`ResponseBuilder`), in the same package as the class under test (`Utilities/RetryTest`). Each test checks the
-  result and how many calls were made, so it fails if the behaviour is wrong.
+  result and how many calls were made, so it fails if the behaviour is wrong. Rules that depend on time take the
+  clock as a parameter (`Instant now`), so a test can fix it (`Cleanup/OrphanSweepTest`).
+- Hooks for the whole run go in `CommonHooks` (`@BeforeAll`, `public static void`, no `TestContext`). They must never
+  throw: an exception there aborts the whole run, including scenarios that don't need that API. Wrap only the call that
+  can fail in `try`, so the `catch` message is always true, then log a warning and return. Catch
+  `Exception | AssertionError`: the shared response spec throws `AssertionError`, which `catch (Exception e)` misses.
+- The orphan sweep deletes only what is certainly ours and old enough (owner + `TEST_PRODUCT_PREFIX`, age from the
+  MongoDB id at least `sweep.min.age.minutes`); anything uncertain is kept. Orders go first, and a product that any
+  remaining order still references is kept (if the orders can't be read, all products are kept). It logs ids and names only, never whole response bodies: an order holds the account email.
+- Every response status a cleanup or sweep can get has a branch: deleted (info), already gone (info, checked by status
+  **and** message), anything else (warning with id and status, counted as a failure). Check the status of a fetch
+  before reading its body.
+- A POST without a body still sets its content type (`ContentType.JSON`): REST Assured's default is a form charset
+  (ISO-8859-1) that the e-commerce API rejects with 500.
 
 ## 18. Reporting
 
@@ -335,5 +354,6 @@ Feature: Place API
 - [ ] A new or changed rule is applied to existing code too: search for the old pattern and fix every match
 - [ ] After adding a tool or plugin, run it once and check `git status`: generated files go in `.gitignore`
 - [ ] Every negative check can fail: a "no longer found" step fetches the id of the thing that was deleted
-- [ ] Framework logic that the live API can't trigger (retries, failure paths) has a unit test, and `RetryTest` passes
+- [ ] Framework logic that the live API can't trigger (retries, failure paths, selection rules) has a unit test, and
+  `RetryTest` and `OrphanSweepTest` pass
 - [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt or the Allure results

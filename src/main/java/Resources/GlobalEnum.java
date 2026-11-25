@@ -18,10 +18,12 @@ public enum GlobalEnum {
 	CREATE_PRODUCT("/api/ecom/product/add-product", "productId"),
 	DELETE_PRODUCT("/api/ecom/product/delete-product/{productId}"),
 	GET_PRODUCT("/api/ecom/product/get-product-detail/{productId}"),
+	GET_ALL_PRODUCTS("/api/ecom/product/get-all-products"),
 	// Order API
 	CREATE_ORDER("/api/ecom/order/create-order", "orders[0]"),
 	DELETE_ORDER("/api/ecom/order/delete-order/{orderId}"),
-	GET_ORDER("/api/ecom/order/get-orders-details");
+	GET_ORDER("/api/ecom/order/get-orders-details"),
+	GET_CUSTOMER_ORDERS("/api/ecom/order/get-orders-for-customer/{userId}");
 
 	private final String resource;
 	private final String createdIdPath;

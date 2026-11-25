@@ -3,6 +3,7 @@ package Api;
 import Context.AuthSession;
 import Pojo.Product;
 import Resources.GlobalEnum;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 
@@ -105,6 +106,28 @@ public class ProductApi {
 	 */
 	public RequestSpecification deleteProductRequest(String productId, AuthSession session) throws IOException {
 		return productRequest(productId, session);
+	}
+
+	/**
+	 * List every product in the store: the admin catalogue and products users added (productAddedBy is their user id).
+	 * The JSON content type is required although there is no body: without it REST Assured sends its default form
+	 * charset (ISO-8859-1), which this API rejects with 500.
+	 *
+	 * @param session the logged-in session
+	 * @return response of the Get All Products call; the products are in "data"
+	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
+	 */
+	public Response getAllProducts(AuthSession session) throws IOException {
+		logInformation("Get all products with " + GlobalEnum.GET_ALL_PRODUCTS);
+		return given().spec(ecomRequestSpecification())
+		              .contentType(ContentType.JSON)
+		              .header(AUTHORIZATION_HEADER, session.getToken())
+		              .when()
+		              .post(GlobalEnum.GET_ALL_PRODUCTS.getResource())
+		              .then()
+		              .spec(defaultResponseSpecification())
+		              .extract()
+		              .response();
 	}
 
 	/**

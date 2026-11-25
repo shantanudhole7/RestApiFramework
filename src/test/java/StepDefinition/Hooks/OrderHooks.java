@@ -71,7 +71,7 @@ public class OrderHooks {
 				} else if (isOrderNotFound(response)) {
 					logInformation("Cleanup: order " + orderId + " was already deleted");
 				} else {
-					String details = " | Status: " + statusCode + " | Body: " + response.asString();
+					String details = " | Status: " + statusCode;
 					logWarning("Cleanup: could not delete order " + orderId + details);
 					testContext.markCleanupFailed(GlobalEnum.CREATE_ORDER);
 				}

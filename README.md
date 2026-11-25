@@ -197,16 +197,22 @@ The HTTP method comes from the feature text (`"POST"`, `"GET"`, case-insensitive
 `request(Method, path)`, so every method works without a branch per method. An unknown method fails with
 `Unsupported HTTP method`.
 
-`Specifications` has three request specs:
+`Specifications` has four request specs:
 
-| Spec                            | Used for    | What it adds                                                                           |
-|---------------------------------|-------------|----------------------------------------------------------------------------------------|
-| `defaultRequestSpecification()` | Place API   | API key, JSON, logging to `requestLogs.txt`, Allure                                    |
-| `ecomRequestSpecification()`    | Product API | Logging and Allure with the `Authorization` header masked; no content type (multipart) |
-| `loginRequestSpecification()`   | Login       | JSON only: no logging and no report, so credentials never reach a file                 |
+| Spec                                   | Used for    | What it adds                                                                           |
+|----------------------------------------|-------------|----------------------------------------------------------------------------------------|
+| `defaultRequestSpecification()`        | Place API   | API key, JSON, logging to `requestLogs.txt`, Allure                                    |
+| `ecomRequestSpecification()`           | Product API | Logging and Allure with the `Authorization` header masked; no content type (multipart) |
+| `ecomStatusOnlyRequestSpecification()` | Order API   | Request logged (token masked), response only by its status line, no Allure             |
+| `loginRequestSpecification()`          | Login       | JSON only: no logging and no report, so credentials never reach a file                 |
 
 The token is masked by two settings, because each output reads its own: a `RequestLoggingFilter` blacklist for
-`requestLogs.txt` and a `LogConfig` blacklist for Allure.
+`requestLogs.txt` and a `LogConfig` blacklist for Allure. Both e-commerce specs build them with the same private
+helpers (`maskedConfig()`, `maskedRequestLogging()`), so the mask exists once.
+
+Order API responses hold the account's email address (`orderBy`), so the Order API uses the status-only spec: its
+responses are never written to `requestLogs.txt` or attached to the Allure report. The tests still read the full
+response; logging filters only write a copy. To see an order response while debugging, repeat the call in Postman.
 
 ### Request bodies
 
@@ -242,8 +248,9 @@ with both values and throws an `AssertionError` on failure:
 19:40:56 | INFO  | PASS | Verify status in response body | Expected: OK | Actual: OK
 ```
 
-`Assertions.assertHttpStatus(response, code)` checks for an exact HTTP status the same way, and also logs the
-response body when the status is wrong, since it usually explains the error. `assertHttpOk(response)` (200) and
+`Assertions.assertHttpStatus(response, code)` checks for an exact HTTP status the same way. When the status is wrong,
+it logs both status codes and points to `requestLogs.txt`, which holds the response unless it carries personal data;
+it never logs the body itself. `assertHttpOk(response)` (200) and
 `assertHttpNotFound(response)` (404) are named shortcuts for it. Steps assert the exact code from the API contract,
 not just "any 2xx".
 
@@ -303,7 +310,7 @@ When a delete itself fails, cleanup still never fails the scenario:
 - **Retry:** each delete goes through `Retry.sendWithRetry`. A server error (5xx) or a network error is retried after
   a short pause, up to `cleanup.retry.attempts` tries with `cleanup.retry.delay.ms` between them (`Global.properties`).
   A 4xx is never retried, because the request itself is wrong. If every try fails, the hook logs a warning with the
-  id, status and body.
+  id and status, plus the body for Place and Product (Order logs the status only: its responses carry personal data).
 - **Keep the parent:** if an order still can't be deleted, `ProductHooks` keeps the scenario's products and logs each
   one, so no order is left pointing at a deleted product. `OrderHooks` leaves that note in `TestContext`
   (`markCleanupFailed`), and runs first because of `@After(order = 20000)`.

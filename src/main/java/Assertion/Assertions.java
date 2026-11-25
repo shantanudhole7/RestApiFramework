@@ -39,7 +39,8 @@ public final class Assertions {
 
 	/**
 	 * Assert that an API response has the expected HTTP status, and log the result as a PASS or FAIL line.
-	 * On failure the response body is logged too, since it usually explains the error.
+	 * On failure the status is logged with a pointer to requestLogs.txt, which holds the response unless it carries
+	 * personal data.
 	 *
 	 * @param response       the API response to check
 	 * @param expectedStatus the expected HTTP status code, e.g. 200
@@ -47,7 +48,8 @@ public final class Assertions {
 	public static void assertHttpStatus(Response response, int expectedStatus) {
 		int statusCode = response.statusCode();
 		if (statusCode != expectedStatus) {
-			logError("Unexpected status " + statusCode + " | Body: " + response.asString());
+			String mismatch = "Unexpected status " + statusCode + " (expected " + expectedStatus + ")";
+			logError(mismatch + "; see requestLogs.txt for the response");
 		}
 		assertEquals("Verify that api returns " + expectedStatus, expectedStatus, statusCode);
 	}

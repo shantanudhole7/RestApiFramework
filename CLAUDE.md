@@ -59,7 +59,8 @@ Framework, `src/main/java/`:
 - `Setup/` one class per API (`<Name>Setup`): creates setup data that hooks and steps share (build, send, register for
   cleanup, check, store the id in `TestContext`); injected like `TestContext`
 - `Specification/Specifications` request specs `defaultRequestSpecification()` (Place), `loginRequestSpecification()`
-  (unlogged) and `ecomRequestSpecification()` (token masked), plus the response spec `defaultResponseSpecification()`
+  (unlogged), `ecomRequestSpecification()` (token masked; Product) and `ecomStatusOnlyRequestSpecification()` (token
+  masked, response status only, no Allure; Order), plus the response spec `defaultResponseSpecification()`
 - `Utilities/` `ConfigReader` (settings and secrets, from the classpath), `ResponseUtils` (JSON helper), `Retry` and
   `ApiCall` (resend a failed cleanup call on 5xx or network errors)
 
@@ -129,7 +130,12 @@ Test files, `src/test/resources/`:
 - The e-commerce API returns 201 for Create Product, and 400 with "Product not found" (not 404) for a missing product;
   the delete endpoint spells it "Product not foundd". Steps check status and message; cleanup uses `startsWith`.
 - Masking the Authorization header needs two settings: the `RequestLoggingFilter` blacklist (requestLogs.txt) and the
-  `LogConfig` blacklist (Allure). Removing either one leaks the token into that output.
+  `LogConfig` blacklist (Allure). Removing either one leaks the token into that output. Both e-commerce specs get them
+  from `maskedConfig()` and `maskedRequestLogging()`; never build a masked spec without them.
+- Order API responses hold the account email (`orderBy`), so `OrderApi` builds every request on
+  `ecomStatusOnlyRequestSpecification()`: requestLogs.txt shows only `HTTP/1.1 200 OK` for order calls, and the Allure
+  report has no attachments for them. That is intended; the steps still read the full response. Moving an order call
+  back to `ecomRequestSpecification()` leaks the email into both outputs.
 - A missing `secrets.properties`, or a blank key in it, stops the run with a clear error; copy
   `secrets.properties.example` and fill in a test account.
 - The Order API returns 201 with the new id inside an array (`orders[0]`). It fetches by query parameter
@@ -266,3 +272,7 @@ Add one line per decision so future sessions keep it.
 - 2026-11-25: The orphan sweep's product rule is "never delete a product that a remaining order references" (replaces
   "products only if every order is gone"): every order still there after the order pass protects its product, and an
   unreadable order list keeps all products. A `@BeforeAll` catches `Exception | AssertionError`.
+- 2026-11-25: Responses that carry personal data are logged by status only and never attached to Allure
+  (`ecomStatusOnlyRequestSpecification()`, used by the whole Order API, whose responses hold the account email). One
+  rule per API instead of per call, so a response that later gains personal data is already covered. Allure can't mask
+  a single field, so it is left out for those calls.

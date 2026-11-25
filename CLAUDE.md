@@ -33,6 +33,7 @@ Academy Place API and e-commerce (Product and Order) API. Study project, committ
 - Run one scenario: green arrow next to it in the `.feature` file
 - Open the Allure report: Maven tool window → Plugins → allure → `allure:serve` (after running `TestRunner`)
 - Quick report without Maven: open `target/cucumber-reports/cucumber.html` in a browser
+- Reporting Labs report: open `target/reporting-labs/index.html` in a browser (after running `TestRunner`)
 
 ## Layout
 
@@ -65,7 +66,8 @@ Framework, `src/main/java/`:
   `ApiCall` (resend a failed cleanup call on 5xx or network errors)
 
 Tests, `src/test/java/`:
-- `cucumber/Options/TestRunner` JUnit runner: `classpath:features`, glue, `pretty`, Cucumber HTML and Allure plugins
+- `cucumber/Options/TestRunner` JUnit runner: `classpath:features`, glue, `pretty`, Cucumber HTML, Allure and
+  Reporting Labs plugins
 - `StepDefinition/` one step class per API (`<Name>ApiStepDefinition`), plus `CommonStepDefinition` (http call,
   status, response body) and `LoginStepDefinition` (the "the user is logged in" step)
 - `StepDefinition/Hooks/` one hook class per API (`<Name>Hooks`): `@Before("@Delete<Name>")` creates what the Delete
@@ -78,9 +80,11 @@ Test files, `src/test/resources/`:
 - `features/` one feature file per API (`<Name>Api.feature`)
 - `Global.properties` (settings), `secrets.properties` (credentials, git-ignored; copy `secrets.properties.example`)
 - `files/` (test files, e.g. the placeholder product image), `logback-test.xml` (log format and outputs),
-  `allure.properties` (Allure results folder, `target/allure-results`)
+  `allure.properties` (Allure results folder, `target/allure-results`), `reporting-labs.properties` (report title,
+  BDD steps, `maskKeys`)
 
-- Generated, never edit or commit: `target/`, `requestLogs.txt`, `.allure/` (Allure tool downloaded by `allure:serve`)
+- Generated, never edit or commit: `target/`, `requestLogs.txt`, `reporting-labs.history.json` (Reporting Labs run
+  history), `.allure/` (Allure tool downloaded by `allure:serve`)
 
 ## Conventions (summary; the skill has the full detail)
 
@@ -94,7 +98,9 @@ Test files, `src/test/resources/`:
 - Log with `Log`; never `System.out`, never secrets.
 - Javadoc on every class and public method; single-class imports; format Java files with Ctrl+Alt+L, never `.md` files.
 - POJO fields camelCase; map snake_case JSON keys with `@JsonProperty("json_key")`.
-- Feature files PascalCase, one per API area; tags PascalCase (`@PlaceApi`, `@AddPlace`, `@Smoke`).
+- Feature files PascalCase, one per API area; tags PascalCase (`@PlaceApi`, `@AddPlace`, `@Smoke`), except the
+  Reporting Labs metadata tags, which use the library's shapes: `@P0`–`@P4`, severity words (`@critical`, `@major`),
+  `@owner:Name`, `@feature:Name`.
 - Step definition annotations match the feature text exactly; unimplemented steps throw `PendingException`,
   never an empty body.
 - Step definitions need Javadoc only when their behaviour isn't obvious from the step text.
@@ -123,7 +129,7 @@ Test files, `src/test/resources/`:
 - Cleanup log lines (`Cleanup: …`) appear after the last step; a `WARN | Cleanup: could not delete place` line
   means a place may have been left on the live API.
 - Reports are written only when `TestRunner` (or `mvn test`) runs; the green arrow in a `.feature` file ignores
-  `@CucumberOptions`, so no Allure or HTML report is produced.
+  `@CucumberOptions`, so no Allure, HTML or Reporting Labs report is produced.
 - `allure:serve` serves the report on the machine's network IP while it runs; stop it when done.
 - `@Before` hooks run before the `Background`: a setup hook that needs the e-commerce session gets it from
   `LoginApi.session()` itself, because the "the user is logged in" step has not run yet.
@@ -169,6 +175,11 @@ Test files, `src/test/resources/`:
 - `@BeforeAll` output belongs to no scenario, so the IntelliJ console shows the `Orphan sweep:` lines after the
   scenarios; the real order is in `target/logs/`. During `@BeforeAll` Allure logs `ERROR | Could not add attachment: no
   test is running` for each sweep request: harmless, the request is still sent.
+- The Reporting Labs REST Assured add-on records every REST Assured call through a global filter, whatever the spec.
+  Personal data is hidden only by `reporting-labs.maskKeys` (key-name substrings; tokens and passwords are masked by
+  default, emails are not). A new field with personal data leaks into the report until its key is added there.
+- The `@BeforeAll` login (orphan sweep) is never in the Reporting Labs report: no scenario is running yet. If that
+  login fails, the first scenario logs in itself and the request is recorded, with `userEmail` masked by `maskKeys`.
 - `@BeforeAll` can't be filtered by tags: a Place-only run still logs in to the e-commerce API and sweeps.
 - An exception or error that escapes a `@BeforeAll` aborts the whole run. `AssertionError` is an `Error`, not an
   `Exception`, so `catch (Exception e)` doesn't stop it; catch `Exception | AssertionError`.
@@ -277,3 +288,9 @@ Add one line per decision so future sessions keep it.
   a single field, so it is left out for those calls.
 - 2026-11-25: `pom.xml` sets `maven.compiler.release` 11 (which also rejects JDK APIs newer than Java 11) and UTF-8
   sources; build plugins (compiler, surefire) have pinned versions, so every machine builds the same way.
+- 2026-11-25: Reporting Labs is added next to Allure (Cucumber plugin in `TestRunner`, REST Assured add-on with its
+  global recorder, test scope). Personal data never appears in any output: Reporting Labs can mask single fields, so it
+  records every call with `maskKeys=orderBy,userEmail`; `requestLogs.txt` and Allure can't, so Order bodies stay out of
+  them. Allure is to be removed in its own PR once Reporting Labs has proven itself over a few runs.
+- 2026-11-25: Scenarios carry Reporting Labs metadata tags: `@owner` and `@feature` on each Feature; `@P1 @critical` on
+  create and `@P2 @major` on delete scenarios. They are the one exception to PascalCase tags.

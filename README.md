@@ -17,6 +17,7 @@ built from POJOs and a shared request specification, and every check is logged a
 | Cucumber + JUnit | BDD scenarios in Gherkin, step definitions, test runner          |
 | PicoContainer    | Injects one shared TestContext per scenario into steps and hooks |
 | Allure           | Test report with every request and response attached per step    |
+| Reporting Labs   | One-file HTML report: scenarios, steps, API calls, history       |
 | SLF4J + Logback  | Framework logging: console and one log file per run              |
 
 ---
@@ -59,7 +60,8 @@ RestApiFramework/
 │           ├── Global.properties         # Settings: base URI, API key, cleanup retry, orphan sweep age
 │           ├── secrets.properties.example   # Template for the git-ignored secrets.properties
 │           ├── logback-test.xml          # Log format and outputs
-│           └── allure.properties         # Allure results folder
+│           ├── allure.properties         # Allure results folder
+│           └── reporting-labs.properties # Reporting Labs: title, BDD steps, masked keys
 ├── CLAUDE.md                             # Project context and rules for Claude Code
 ├── pom.xml                               # Dependencies and plugins
 └── README.md
@@ -68,8 +70,9 @@ RestApiFramework/
 `src/main/java` is the framework; `src/test` holds the tests that use it: the runner, the step definitions and
 hooks, unit tests, and the feature files and config they read.
 
-Generated and never committed: `target/` (build output, logs and reports), `requestLogs.txt` and `.allure/` (the
-Allure tool downloaded by `allure:serve`).
+Generated and never committed: `target/` (build output, logs and reports), `requestLogs.txt`,
+`reporting-labs.history.json` (Reporting Labs run history) and `.allure/` (the Allure tool downloaded by
+`allure:serve`).
 Also never committed: `secrets.properties`, your local credentials.
 
 ---
@@ -134,6 +137,10 @@ the live practice API; the unit tests (`RetryTest`, `OrphanSweepTest`) don't cal
 Tags: `@PlaceApi`, `@ProductApi` and `@OrderApi` (every scenario of that API), `@AddPlace`, `@DeletePlace`,
 `@CreateProduct`, `@DeleteProduct`, `@CreateOrder`, `@DeleteOrder`, `@Smoke`.
 
+Metadata tags for the Reporting Labs report use the library's own shapes: `@owner:Shantanu` and `@feature:Place`
+(on each Feature), `@P1 @critical` (create scenarios) and `@P2 @major` (delete scenarios). They also filter runs:
+`mvn test "-Dcucumber.filter.tags=@P1"`.
+
 **Note:** `pom.xml` sets `testFailureIgnore = true`, so Maven reports **BUILD SUCCESS even when scenarios fail**.
 Always check the test results in the console (`pretty` output) or the report.
 
@@ -141,10 +148,11 @@ Always check the test results in the console (`pretty` output) or the report.
 
 Run `TestRunner` (or `mvn test`), then:
 
-| Report        | How to open                                               | What it shows                                                                                      |
-|---------------|-----------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| Allure        | Maven tool window → Plugins → allure → `allure:serve`     | Scenarios, steps, hooks, timings, and every request and response attached to the step that sent it |
-| Cucumber HTML | Open `target/cucumber-reports/cucumber.html` in a browser | Quick single-file overview, filterable by tag                                                      |
+| Report         | How to open                                               | What it shows                                                                                                        |
+|----------------|-----------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| Allure         | Maven tool window → Plugins → allure → `allure:serve`     | Scenarios, steps, hooks, timings, and every request and response attached to the step that sent it                   |
+| Cucumber HTML  | Open `target/cucumber-reports/cucumber.html` in a browser | Quick single-file overview, filterable by tag                                                                        |
+| Reporting Labs | Open `target/reporting-labs/index.html` in a browser      | Scenarios, Given/When/Then steps, every API call (personal data masked), priority/owner/feature, history across runs |
 
 Running a scenario from the green arrow in the `.feature` file doesn't write reports.
 
@@ -213,6 +221,11 @@ helpers (`maskedConfig()`, `maskedRequestLogging()`), so the mask exists once.
 Order API responses hold the account's email address (`orderBy`), so the Order API uses the status-only spec: its
 responses are never written to `requestLogs.txt` or attached to the Allure report. The tests still read the full
 response; logging filters only write a copy. To see an order response while debugging, repeat the call in Postman.
+
+The Reporting Labs report records every REST Assured call (its add-on adds a global filter) and **can** mask single
+fields, so order calls appear there with `orderBy` masked (`reporting-labs.maskKeys=orderBy,userEmail` in
+`reporting-labs.properties`; tokens and passwords are masked by default). The rule behind both: personal data never
+appears in any output; where an output can mask a field it is masked, and where it can't, the body is left out.
 
 ### Request bodies
 

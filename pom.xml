@@ -11,6 +11,8 @@
         <maven.compiler.release>11</maven.compiler.release>
         <!-- Read and write source files as UTF-8 on every machine -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- One version for every Reporting Labs artifact -->
+        <reporting-labs.version>0.1.35</reporting-labs.version>
     </properties>
 
     <dependencyManagement>
@@ -84,6 +86,23 @@
         <dependency>
             <groupId>io.qameta.allure</groupId>
             <artifactId>allure-rest-assured</artifactId>
+        </dependency>
+
+        <!-- Reporting Labs: one-file HTML report (target/reporting-labs); plugin registered in TestRunner.
+        https://reportinglabs.dev/get-started/java/cucumber -->
+        <dependency>
+            <groupId>dev.reportinglabs</groupId>
+            <artifactId>reporting-labs-cucumber</artifactId>
+            <version>${reporting-labs.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Reporting Labs API recording; records every REST Assured call (global filter), masked via reporting-labs.properties -->
+        <dependency>
+            <groupId>dev.reportinglabs</groupId>
+            <artifactId>reporting-labs-rest-assured</artifactId>
+            <version>${reporting-labs.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

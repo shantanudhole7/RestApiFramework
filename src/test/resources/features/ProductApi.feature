@@ -1,11 +1,11 @@
-@ProductApi
+@ProductApi @owner:Shantanu @feature:Product
 Feature: Product API
   Create and delete products in the e-commerce store as a logged-in user.
 
   Background:
     Given the user is logged in
 
-  @CreateProduct @Smoke
+  @CreateProduct @Smoke @P1 @critical
   Scenario Outline: Create a product and verify it can be fetched
     Given Create Product payload with "<Name>" "<Category>" "<Sub Category>" "<Description>" "<Price>" "<For>"
     When User calls "CREATE_PRODUCT" with "POST" http request
@@ -17,7 +17,7 @@ Feature: Product API
       | Name           | Category | Sub Category | Description | Price | For |
       | Test Product 1 | fashion  | Shoes        | Sneaker     | 1999  | Men |
 
-  @DeleteProduct @Smoke
+  @DeleteProduct @Smoke @P2 @major
   Scenario: Delete a product and verify the delete succeeds
     # The @DeleteProduct hook creates the product to delete (ProductHooks.createProductForDelete)
     Given Delete Product request for the created product

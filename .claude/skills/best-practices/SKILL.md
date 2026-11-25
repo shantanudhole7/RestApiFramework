@@ -39,7 +39,8 @@ src/
     ├── secrets.properties.example              # Template for the git-ignored secrets.properties
     ├── files/                                  # Test files (placeholder image for Create Product)
     ├── logback-test.xml                        # Log format and outputs
-    └── allure.properties                       # Allure results folder (target/allure-results)
+    ├── allure.properties                       # Allure results folder (target/allure-results)
+    └── reporting-labs.properties               # Reporting Labs: title, BDD steps, maskKeys
 ```
 
 - Framework code (everything tests use: API classes, builders, assertions, setup, specs, utilities, POJOs) goes in
@@ -53,20 +54,20 @@ src/
 
 ## 2. Naming
 
-| Item                      | Convention                                                          | Example                                                               |
-|---------------------------|---------------------------------------------------------------------|-----------------------------------------------------------------------|
-| Class, enum               | PascalCase                                                          | `Assertions`, `GlobalEnum`                                            |
-| Method                    | camelCase                                                           | `getPropertiesValue`, `defaultRequestSpecification`, `logInformation` |
-| Step definition method    | camelCase, from the step text                                       | `addPlacePayloadWith`, `userCallsWithHttpRequest`                     |
-| Variable, parameter       | camelCase                                                           | `baseUri`, `globalKey`                                                |
-| Constant (`static final`) | UPPER_SNAKE_CASE                                                    | `PROPERTIES_FILE`, `REQUEST_LOG_FILE`                                 |
-| Enum constant             | UPPER_SNAKE_CASE, no `API` suffix                                   | `ADD_PLACE`, `GET_PLACE`, `DELETE_PLACE`                              |
-| Properties key            | lowercase, dot-separated                                            | `api.base.uri`, `api.key`                                             |
-| Package                   | PascalCase (existing project style)                                 | `Pojo`, `Resources`, `Assertion`, `Logger`, `Api`, `Context`          |
-| POJO field                | camelCase; map a different JSON key with `@JsonProperty`            | `phoneNumber` → `"phone_number"`                                      |
-| Feature file              | PascalCase, one per API area                                        | `PlaceApi.feature`                                                    |
-| Cucumber tag              | PascalCase with `@`                                                 | `@PlaceApi`, `@AddPlace`, `@Smoke`                                    |
-| Branch                    | `<type>/<short-name>`; type `feature`, `refactor`, `fix` or `chore` | `feature/add-place-scenario`, `refactor/single-responsibility`        |
+| Item                      | Convention                                                           | Example                                                                   |
+|---------------------------|----------------------------------------------------------------------|---------------------------------------------------------------------------|
+| Class, enum               | PascalCase                                                           | `Assertions`, `GlobalEnum`                                                |
+| Method                    | camelCase                                                            | `getPropertiesValue`, `defaultRequestSpecification`, `logInformation`     |
+| Step definition method    | camelCase, from the step text                                        | `addPlacePayloadWith`, `userCallsWithHttpRequest`                         |
+| Variable, parameter       | camelCase                                                            | `baseUri`, `globalKey`                                                    |
+| Constant (`static final`) | UPPER_SNAKE_CASE                                                     | `PROPERTIES_FILE`, `REQUEST_LOG_FILE`                                     |
+| Enum constant             | UPPER_SNAKE_CASE, no `API` suffix                                    | `ADD_PLACE`, `GET_PLACE`, `DELETE_PLACE`                                  |
+| Properties key            | lowercase, dot-separated                                             | `api.base.uri`, `api.key`                                                 |
+| Package                   | PascalCase (existing project style)                                  | `Pojo`, `Resources`, `Assertion`, `Logger`, `Api`, `Context`              |
+| POJO field                | camelCase; map a different JSON key with `@JsonProperty`             | `phoneNumber` → `"phone_number"`                                          |
+| Feature file              | PascalCase, one per API area                                         | `PlaceApi.feature`                                                        |
+| Cucumber tag              | PascalCase with `@`; Reporting Labs metadata uses the library shapes | `@PlaceApi`, `@AddPlace`, `@Smoke`; `@P1`, `@critical`, `@owner:Shantanu` |
+| Branch                    | `<type>/<short-name>`; type `feature`, `refactor`, `fix` or `chore`  | `feature/add-place-scenario`, `refactor/single-responsibility`            |
 
 - Never name a method the same as a library method it calls unqualified (a custom `assertEquals` that called
   `assertEquals(...)` without its class name would call itself).
@@ -331,8 +332,15 @@ Feature: Place API
 
 ## 18. Reporting
 
-- `TestRunner` writes two reports: Allure results to `target/allure-results` (open with Maven → Plugins → allure →
-  `allure:serve`) and a single-file Cucumber report to `target/cucumber-reports/cucumber.html`.
+- `TestRunner` writes three reports: Allure results to `target/allure-results` (open with Maven → Plugins → allure →
+  `allure:serve`), a single-file Cucumber report to `target/cucumber-reports/cucumber.html`, and the Reporting Labs
+  report to `target/reporting-labs/index.html` (plugin `dev.reportinglabs.cucumber.ReportingLabsPlugin`).
+- Every Feature has `@owner:Name` and `@feature:Name`; every scenario a priority (`@P0`–`@P4`) and a severity
+  (`@critical`, `@major`, …). These are the Reporting Labs metadata shapes, the one exception to PascalCase tags.
+- The Reporting Labs REST Assured add-on records every call (global filter). Personal data in its recordings is
+  hidden only by `reporting-labs.maskKeys` (exact key names, e.g. `orderBy,userEmail`); tokens and passwords are
+  masked by default, emails are not. Personal data never appears in any output: mask it where the output can mask a
+  field, leave the body out where it can't.
 - Reports are written only when `TestRunner` (or `mvn test`) runs. The green arrow in a `.feature` file uses
   IntelliJ's own Cucumber configuration and ignores `@CucumberOptions`.
 - Requests and responses reach the Allure report through the `AllureRestAssured` filter on the shared request spec.
@@ -363,4 +371,6 @@ Feature: Place API
 - [ ] Every negative check can fail: a "no longer found" step fetches the id of the thing that was deleted
 - [ ] Framework logic that the live API can't trigger (retries, failure paths, selection rules) has a unit test, and
   `RetryTest` and `OrphanSweepTest` pass
-- [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt or the Allure results
+- [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt, the Allure
+  results or `target/reporting-labs/index.html`; after adding or changing an API, add any new personal-data key to
+  `reporting-labs.maskKeys` first

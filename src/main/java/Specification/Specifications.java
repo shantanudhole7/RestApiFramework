@@ -53,6 +53,12 @@ public final class Specifications {
 	/** E-commerce spec for responses that carry personal data: response status only; built once. */
 	private static RequestSpecification ecomStatusOnlyRequestSpecification;
 
+	/** Global.properties key holding the base URI of every API. */
+	private static final String BASE_URI_KEY = "api.base.uri";
+
+	/** Global.properties key holding the Place API's key. */
+	private static final String API_KEY_PROPERTY = "api.key";
+
 	private Specifications() {
 		// Prevent instantiation of this utility class
 	}
@@ -67,9 +73,9 @@ public final class Specifications {
 	 */
 	public static RequestSpecification defaultRequestSpecification() throws IOException {
 		if (requestSpecification == null) {
-			String baseUri = getPropertiesValue("api.base.uri");
+			String baseUri = baseUri();
 			requestSpecification = new RequestSpecBuilder().setBaseUri(baseUri)
-			                                               .addQueryParam("key", getPropertiesValue("api.key"))
+			                                               .addQueryParam("key", getPropertiesValue(API_KEY_PROPERTY))
 			                                               .setContentType(ContentType.JSON)
 			                                               .addFilter(RequestLoggingFilter.logRequestTo(
 					                                               requestLogStream()))
@@ -107,7 +113,7 @@ public final class Specifications {
 	 */
 	public static RequestSpecification loginRequestSpecification() throws IOException {
 		if (loginRequestSpecification == null) {
-			loginRequestSpecification = new RequestSpecBuilder().setBaseUri(getPropertiesValue("api.base.uri"))
+			loginRequestSpecification = new RequestSpecBuilder().setBaseUri(baseUri())
 			                                                    .setContentType(ContentType.JSON)
 			                                                    .build();
 		}
@@ -152,6 +158,16 @@ public final class Specifications {
 	}
 
 	/**
+	 * Read the base URI shared by every API from Global.properties.
+	 *
+	 * @return the base URI
+	 * @throws IOException if Global.properties cannot be read
+	 */
+	private static String baseUri() throws IOException {
+		return getPropertiesValue(BASE_URI_KEY);
+	}
+
+	/**
 	 * Build the e-commerce API request specification: base URI, request/response logging to requestLogs.txt, with the
 	 * Authorization header masked. No content type, because product requests are multipart; the caller adds the
 	 * Authorization header from the logged-in session. Built once per run and reused.
@@ -161,7 +177,7 @@ public final class Specifications {
 	 */
 	public static synchronized RequestSpecification ecomRequestSpecification() throws IOException {
 		if (ecomRequestSpecification == null) {
-			ecomRequestSpecification = new RequestSpecBuilder().setBaseUri(getPropertiesValue("api.base.uri"))
+			ecomRequestSpecification = new RequestSpecBuilder().setBaseUri(baseUri())
 			                                                   .setConfig(maskedConfig())
 			                                                   .addFilter(maskedRequestLogging())
 			                                                   .addFilter(ResponseLoggingFilter.logResponseTo(
@@ -182,7 +198,7 @@ public final class Specifications {
 	 */
 	public static synchronized RequestSpecification ecomStatusOnlyRequestSpecification() throws IOException {
 		if (ecomStatusOnlyRequestSpecification == null) {
-			ecomStatusOnlyRequestSpecification = new RequestSpecBuilder().setBaseUri(getPropertiesValue("api.base.uri"))
+			ecomStatusOnlyRequestSpecification = new RequestSpecBuilder().setBaseUri(baseUri())
 			                                                             .setConfig(maskedConfig())
 			                                                             .addFilter(maskedRequestLogging())
 			                                                             .addFilter(new ResponseLoggingFilter(

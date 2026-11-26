@@ -56,22 +56,23 @@ public final class Retry {
 		if (attempts < 1) {
 			throw new IllegalArgumentException("Retry attempts must be at least 1, was " + attempts);
 		}
-		for (int attempt = 1; ; attempt++) {                 // no end condition here: every path inside returns or throws
+		for (int attempt = 1; ; attempt++) {             // no end condition here: every path inside returns or throws
 			String problem;
 			try {
 				Response response = call.call();
 				if (!isServerError(response) || attempt == attempts) {
-					return response;                         // success, 4xx, or out of attempts: the hook decides
+					return response;                     // success, 4xx, or out of attempts: the hook decides
 				}
 				problem = "status " + response.statusCode();
 			} catch (IOException e) {
 				if (attempt == attempts) {
-					throw e;                                  // out of attempts: the hook's catch logs it
+					throw e;                              // out of attempts: the hook's catch logs it
 				}
 				problem = e.getMessage();
 			}
-			logWarning("Cleanup: " + description + " failed (" + problem + "), attempt " + attempt + " of "
-					           + attempts + ", retrying in " + delayMs + " ms");
+			String attemptInfo = "attempt " + attempt + " of " + attempts;
+			String additionalInfo = ", retrying in " + delayMs + " ms";
+			logWarning("Cleanup: " + description + " failed (" + problem + "), " + attemptInfo + additionalInfo);
 			pause(delayMs);
 		}
 	}

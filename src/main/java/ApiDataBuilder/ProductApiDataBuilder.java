@@ -54,8 +54,8 @@ public class ProductApiDataBuilder {
 	public Product createProductPayload(String name, String category, String subCategory, String description,
 	                                    String price, String productFor, String userId) {
 		if (!name.startsWith(TEST_PRODUCT_PREFIX)) {
-			throw new IllegalArgumentException(
-					"Test product names must start with '" + TEST_PRODUCT_PREFIX + "' so leftovers can be swept: " + name);
+			String nameRule = "Test product names must start with '" + TEST_PRODUCT_PREFIX + "'";
+			throw new IllegalArgumentException(nameRule + " so leftovers can be swept: " + name);
 		}
 		return new Product().setProductName(name)
 		                    .setProductCategory(category)

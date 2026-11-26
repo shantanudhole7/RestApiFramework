@@ -1,6 +1,5 @@
 package Specification;
 
-import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.config.LogConfig;
@@ -24,17 +23,16 @@ import static Utilities.ConfigReader.getPropertiesValue;
 /**
  * Shared request and response specifications.
  * Each spec is built once per run and reused. The default spec logs every request and response to
- * requestLogs.txt and Allure; the login spec logs nothing, because it carries credentials.
+ * requestLogs.txt; the login spec logs nothing, because it carries credentials.
  * The e-commerce spec logs too, with the Authorization header masked.
- * The status-only e-commerce spec logs only the response status and attaches nothing to Allure,
- * for responses that carry personal data
+ * The status-only e-commerce spec logs only the response status, for responses that carry personal data.
  */
 public final class Specifications {
 
 	/** File that every request and response is logged to. */
 	private static final String REQUEST_LOG_FILE = "requestLogs.txt";
 
-	/** Header whose value is masked as [ BLACKLISTED ] in requestLogs.txt and the Allure report. */
+	/** Header whose value is masked as [ BLACKLISTED ] in requestLogs.txt. */
 	public static final String AUTHORIZATION_HEADER = "Authorization";
 
 	/** Request specification shared by every API call; built on first use, then reused for the whole run. */
@@ -52,7 +50,7 @@ public final class Specifications {
 	/** E-commerce API request specification; built on first use, then reused. */
 	private static RequestSpecification ecomRequestSpecification;
 
-	/** E-commerce spec for responses that carry personal data: response status only, no Allure; built once. */
+	/** E-commerce spec for responses that carry personal data: response status only; built once. */
 	private static RequestSpecification ecomStatusOnlyRequestSpecification;
 
 	private Specifications() {
@@ -60,9 +58,8 @@ public final class Specifications {
 	}
 
 	/**
-	 * Build the base request specification shared by every Place API call:
-	 * base URI and API key from Global.properties, JSON content type,
-	 * request/response logging to requestLogs.txt, and every request and response attached to the Allure report.
+	 * Build the base request specification shared by every Place API call: base URI and API key from
+	 * Global.properties, JSON content type, request/response logging to requestLogs.txt.
 	 * Built once per run and reused, so all calls log to the same file.
 	 *
 	 * @return the shared RequestSpecification
@@ -78,10 +75,9 @@ public final class Specifications {
 					                                               requestLogStream()))
 			                                               .addFilter(ResponseLoggingFilter.logResponseTo(
 					                                               requestLogStream()))
-			                                               .addFilter(new AllureRestAssured())
 			                                               .build();
-			logInformation(
-					"Request specification created | Base URI: " + baseUri + " | Requests and responses logged to " + REQUEST_LOG_FILE);
+			String logTarget = " | Requests and responses logged to " + REQUEST_LOG_FILE;
+			logInformation("Request specification created | Base URI: " + baseUri + logTarget);
 		}
 		return requestSpecification;
 	}
@@ -103,7 +99,7 @@ public final class Specifications {
 
 	/**
 	 * Build a request specification for requests that carry credentials, such as login: base URI and JSON content
-	 * type only, with no logging and no Allure filter, so passwords and tokens never reach a log file or a report.
+	 * type only, with no logging, so passwords and tokens never reach requestLogs.txt.
 	 * Built once per run and reused.
 	 *
 	 * @return the login RequestSpecification (no logging, no report filters)
@@ -133,7 +129,8 @@ public final class Specifications {
 	}
 
 	/**
-	 * Build a config that masks the Authorization header wherever REST Assured logs (Allure, log()).
+	 * Build a config that masks the Authorization header wherever REST Assured's own logging runs (log()), kept as a
+	 * safeguard when debugging.
 	 *
 	 * @return the masked RestAssuredConfig
 	 */
@@ -155,10 +152,9 @@ public final class Specifications {
 	}
 
 	/**
-	 * Build the e-commerce API request specification: base URI, request/response logging to requestLogs.txt and
-	 * the Allure report, with the Authorization header masked in both. No content type, because product requests
-	 * are multipart; the caller adds the Authorization header from the logged-in session.
-	 * Built once per run and reused.
+	 * Build the e-commerce API request specification: base URI, request/response logging to requestLogs.txt, with the
+	 * Authorization header masked. No content type, because product requests are multipart; the caller adds the
+	 * Authorization header from the logged-in session. Built once per run and reused.
 	 *
 	 * @return the e-commerce RequestSpecification
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created
@@ -170,7 +166,6 @@ public final class Specifications {
 			                                                   .addFilter(maskedRequestLogging())
 			                                                   .addFilter(ResponseLoggingFilter.logResponseTo(
 					                                                   requestLogStream()))
-			                                                   .addFilter(new AllureRestAssured())
 			                                                   .build();
 			logInformation("E-commerce request specification created");
 		}
@@ -179,8 +174,8 @@ public final class Specifications {
 
 	/**
 	 * Build the e-commerce request specification for responses that carry personal data (the Order API's responses
-	 * hold the account email): the request is logged with the token masked, the response only by its status line, and
-	 * nothing is attached to Allure, which has no way to hide one field. Built once per run and reused.
+	 * hold the account email): the request is logged with the token masked, and the response only by its status line.
+	 * Built once per run and reused.
 	 *
 	 * @return the status-only e-commerce RequestSpecification
 	 * @throws IOException if Global.properties cannot be read or requestLogs.txt cannot be created

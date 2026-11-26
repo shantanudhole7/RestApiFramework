@@ -6,7 +6,6 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
-        <allure.version>2.29.1</allure.version>
         <!-- Language level and target JVM for main and test code; the project needs Java 11+ (logback-classic 1.5+) -->
         <maven.compiler.release>11</maven.compiler.release>
         <!-- Read and write source files as UTF-8 on every machine -->
@@ -14,19 +13,6 @@
         <!-- One version for every Reporting Labs artifact -->
         <reporting-labs.version>0.1.35</reporting-labs.version>
     </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <!-- Keeps every Allure module on the same version -->
-            <dependency>
-                <groupId>io.qameta.allure</groupId>
-                <artifactId>allure-bom</artifactId>
-                <version>${allure.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
 
@@ -75,19 +61,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/io.qameta.allure/allure-cucumber7-jvm -->
-        <dependency>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-cucumber7-jvm</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/io.qameta.allure/allure-rest-assured -->
-        <dependency>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-rest-assured</artifactId>
-        </dependency>
-
         <!-- Reporting Labs: one-file HTML report (target/reporting-labs); plugin registered in TestRunner.
         https://reportinglabs.dev/get-started/java/cucumber -->
         <dependency>
@@ -114,15 +87,6 @@
                 <version>3.5.4</version>
                 <configuration>
                     <testFailureIgnore>true</testFailureIgnore>
-                </configuration>
-            </plugin>
-            <!-- Opens the HTML report from target/allure-results: Maven → Plugins → allure → allure:serve -->
-            <plugin>
-                <groupId>io.qameta.allure</groupId>
-                <artifactId>allure-maven</artifactId>
-                <version>2.12.0</version>
-                <configuration>
-                    <reportVersion>2.29.0</reportVersion>
                 </configuration>
             </plugin>
             <!-- Compiles with maven.compiler.release (needs 3.6+); pinned so every machine builds the same way -->

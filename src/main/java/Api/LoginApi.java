@@ -54,7 +54,7 @@ public final class LoginApi {
 
 	/**
 	 * Log in with the credentials from secrets.properties. The request uses the login spec, which has no logging,
-	 * so the password and token never reach requestLogs.txt or the Allure report.
+	 * so the password and token never reach requestLogs.txt.
 	 *
 	 * @return the new session
 	 * @throws IOException           if Global.properties or secrets.properties cannot be read

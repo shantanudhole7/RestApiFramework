@@ -58,8 +58,8 @@ public final class Specifications {
 	}
 
 	/**
-	 * Build the base request specification shared by every Place API call: base URI and API key from Global.properties,
-	 * JSON content type, request/response logging to requestLogs.txt.
+	 * Build the base request specification shared by every Place API call: base URI and API key from
+	 * Global.properties, JSON content type, request/response logging to requestLogs.txt.
 	 * Built once per run and reused, so all calls log to the same file.
 	 *
 	 * @return the shared RequestSpecification
@@ -76,8 +76,8 @@ public final class Specifications {
 			                                               .addFilter(ResponseLoggingFilter.logResponseTo(
 					                                               requestLogStream()))
 			                                               .build();
-			logInformation(
-					"Request specification created | Base URI: " + baseUri + " | Requests and responses logged to " + REQUEST_LOG_FILE);
+			String logTarget = " | Requests and responses logged to " + REQUEST_LOG_FILE;
+			logInformation("Request specification created | Base URI: " + baseUri + logTarget);
 		}
 		return requestSpecification;
 	}

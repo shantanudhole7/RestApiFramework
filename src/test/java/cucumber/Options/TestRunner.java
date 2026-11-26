@@ -5,8 +5,8 @@ import io.cucumber.junit.CucumberOptions;
 import org.junit.runner.RunWith;
 
 /**
- * Runs every feature file with JUnit. Writes a single-file Cucumber HTML report (target/cucumber-reports/cucumber.html)
- * and the Reporting Labs report (target/reporting-labs/index.html).
+ * Runs every feature file with JUnit. Writes a single-file Cucumber HTML report
+ * (target/cucumber-reports/cucumber.html) and the Reporting Labs report (target/reporting-labs/index.html).
  */
 @RunWith(Cucumber.class)
 @CucumberOptions(

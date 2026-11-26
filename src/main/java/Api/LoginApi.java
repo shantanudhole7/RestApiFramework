@@ -42,7 +42,7 @@ public final class LoginApi {
 	 * Synchronized on the class, so scenarios running in parallel can never log in twice.
 	 *
 	 * @return the run's session
-	 * @throws IOException if Global.properties or secrets.properties cannot be read
+	 * @throws IOException           if Global.properties or secrets.properties cannot be read
 	 * @throws IllegalStateException if a credential is not set, or the login fails or returns no token
 	 */
 	public static synchronized AuthSession session() throws IOException {
@@ -75,11 +75,12 @@ public final class LoginApi {
 		if (response.statusCode() != HTTP_OK) {
 			// Status only: the body of a failed login may echo the email back
 			logError("Login failed | Status: " + response.statusCode());
-			throw new IllegalStateException("Login failed with status " + response.statusCode() + "; check " +
-					                                USER_EMAIL_KEY + " and " + USER_PASSWORD_KEY + " in secrets.properties");
+			String checkMessage = "; check " + USER_EMAIL_KEY + " and " + USER_PASSWORD_KEY + " in secrets.properties";
+			throw new IllegalStateException("Login failed with status " + response.statusCode() + checkMessage);
 		}
 		String token = getJsonPath(response, "token");
-		if (token == null || token.trim().isEmpty()) {
+		if (token == null || token.trim()
+		                          .isEmpty()) {
 			logError("Login returned no token | Status: " + response.statusCode());
 			throw new IllegalStateException("Login succeeded but returned no token");
 		}

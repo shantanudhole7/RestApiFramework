@@ -20,7 +20,10 @@ import static Utilities.Retry.sendWithRetry;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_OK;
 
-/** Cucumber hooks for products: create a product for each Delete scenario, and delete every product a scenario created. */
+/**
+ * Cucumber hooks for products: create a product for each Delete scenario,
+ * and delete every product a scenario created.
+ */
 public class ProductHooks {
 
 	private final TestContext testContext;
@@ -54,8 +57,8 @@ public class ProductHooks {
 
 		if (testContext.hasCleanupFailed(GlobalEnum.CREATE_ORDER)) {
 			for (String productId : productIds) {
-				logWarning("Cleanup: kept product " + productId
-						           + " because an order that references it could not be deleted");
+				String reasonInfo = " because an order that references it could not be deleted";
+				logWarning("Cleanup: kept product " + productId + reasonInfo);
 			}
 			return;
 		}

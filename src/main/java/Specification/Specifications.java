@@ -98,8 +98,9 @@ public final class Specifications {
 	}
 
 	/**
-	 * Built once per run and reused a request specification for requests that carry credentials, such as login:
-	 * base URI and JSON content type only, with no logging, so passwords and tokens never reach requestLogs.txt.
+	 * Build a request specification for requests that carry credentials, such as login: base URI and JSON content
+	 * type only, with no logging, so passwords and tokens never reach requestLogs.txt.
+	 * Built once per run and reused.
 	 *
 	 * @return the login RequestSpecification (no logging, no report filters)
 	 * @throws IOException if Global.properties cannot be read

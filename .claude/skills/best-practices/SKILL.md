@@ -1,6 +1,6 @@
 ---
 name: best-practices
-description: Java + REST Assured + Cucumber API test automation standards for this project — project layout, naming, POJOs, configuration, endpoints, request and response specifications, response reading, assertions, logging, feature files, step definitions, hooks, scenario state (TestContext), API classes, reporting (Allure), Javadoc, formatting, dependencies and Git workflow. Use this skill whenever writing, generating, reviewing, refactoring, or debugging any POJO, utility, assertion, logger call, config value, endpoint, feature file, step definition, hook, TestContext, API class, TestRunner or report setup in this project, even if the request doesn't mention "best practices".
+description: Java + REST Assured + Cucumber API test automation standards for this project — project layout, naming, POJOs, configuration, endpoints, request and response specifications, response reading, assertions, logging, feature files, step definitions, hooks, scenario state (TestContext), API classes, reporting (Reporting Labs), Javadoc, formatting, dependencies and Git workflow. Use this skill whenever writing, generating, reviewing, refactoring, or debugging any POJO, utility, assertion, logger call, config value, endpoint, feature file, step definition, hook, TestContext, API class, TestRunner or report setup in this project, even if the request doesn't mention "best practices".
 user-invocable: false
 ---
 
@@ -39,7 +39,6 @@ src/
     ├── secrets.properties.example              # Template for the git-ignored secrets.properties
     ├── files/                                  # Test files (placeholder image for Create Product)
     ├── logback-test.xml                        # Log format and outputs
-    ├── allure.properties                       # Allure results folder (target/allure-results)
     └── reporting-labs.properties               # Reporting Labs: title, BDD steps, maskKeys
 ```
 
@@ -120,13 +119,13 @@ src/
 - Every request starts from one of the shared specs (`defaultRequestSpecification()` for Place,
   `ecomRequestSpecification()` for Product, `ecomStatusOnlyRequestSpecification()` for Order,
   `loginRequestSpecification()` for login), never a new one.
-- Each spec is built once per run and reused. `defaultRequestSpecification()` (Place: API key, JSON, logging, Allure),
-  `ecomRequestSpecification()` (e-commerce: logging and Allure, no content type for multipart),
+- Each spec is built once per run and reused. `defaultRequestSpecification()` (Place: API key, JSON, logging),
+  `ecomRequestSpecification()` (e-commerce: logging, no content type for multipart),
   `ecomStatusOnlyRequestSpecification()` (e-commerce, for responses that carry personal data: request logged, response
-  status only, no Allure) and `loginRequestSpecification()` (JSON only, no logging, because it carries credentials). Logged specs share one stream
+  status only) and `loginRequestSpecification()` (JSON only, no logging, because it carries credentials). Logged specs share one stream
   to requestLogs.txt.
-- The e-commerce spec masks the `Authorization` header with two separate settings: a `RequestLoggingFilter` blacklist
-  for requestLogs.txt and a `LogConfig` blacklist for Allure. Send the header with `Specifications.AUTHORIZATION_HEADER`,
+- The e-commerce specs mask the `Authorization` header with a `RequestLoggingFilter` blacklist for requestLogs.txt, plus
+  a `LogConfig` blacklist for REST Assured's own `log()` (a safeguard when debugging). Send the header with `Specifications.AUTHORIZATION_HEADER`,
   so the name you send is the name that gets masked.
 - Every response is checked against the shared response spec with
   `.then().spec(defaultResponseSpecification()).extract().response()`. It only expects JSON content;
@@ -191,8 +190,8 @@ src/
 
 ## 12. Dependencies
 
-- Declared in `pom.xml`. Libraries the framework code in `src/main/java` uses (REST Assured, Jackson, Logback, Allure
-  REST Assured) have the default scope; libraries only tests use (Cucumber, Allure Cucumber) use `<scope>test</scope>`.
+- Declared in `pom.xml`. Libraries the framework code in `src/main/java` uses (REST Assured, Jackson, Logback) have the
+  default scope; libraries only tests use (Cucumber, Reporting Labs) use `<scope>test</scope>`.
 - Add or upgrade a dependency only in its own pull request, or as part of the feature that needs it,
   and say why in the description.
 - Prefer a current version when adding a dependency; check mvnrepository first.
@@ -211,7 +210,8 @@ src/
 ## 14. Generated files
 
 Never commit build output, IDE files or local secrets. `.gitignore` covers:
-`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `.allure/` and `src/test/resources/secrets.propertie` (local credentials).
+`target/`, `.idea/`, `*.iml`, `requestLogs.txt`, `reporting-labs.history.json` and `src/test/resources/secrets.properties`
+(local credentials).
 
 ## 15. Git workflow
 
@@ -332,9 +332,8 @@ Feature: Place API
 
 ## 18. Reporting
 
-- `TestRunner` writes three reports: Allure results to `target/allure-results` (open with Maven → Plugins → allure →
-  `allure:serve`), a single-file Cucumber report to `target/cucumber-reports/cucumber.html`, and the Reporting Labs
-  report to `target/reporting-labs/index.html` (plugin `dev.reportinglabs.cucumber.ReportingLabsPlugin`).
+- `TestRunner` writes two reports: a single-file Cucumber report to `target/cucumber-reports/cucumber.html`, and the
+  Reporting Labs report to `target/reporting-labs/index.html` (plugin `dev.reportinglabs.cucumber.ReportingLabsPlugin`).
 - Every Feature has `@owner:Name` and `@feature:Name`; every scenario a priority (`@P0`–`@P4`) and a severity
   (`@critical`, `@major`, …). These are the Reporting Labs metadata shapes, the one exception to PascalCase tags.
 - The Reporting Labs REST Assured add-on records every call (global filter). Personal data in its recordings is
@@ -343,15 +342,10 @@ Feature: Place API
   field, leave the body out where it can't.
 - Reports are written only when `TestRunner` (or `mvn test`) runs. The green arrow in a `.feature` file uses
   IntelliJ's own Cucumber configuration and ignores `@CucumberOptions`.
-- Requests and responses reach the Allure report through the `AllureRestAssured` filter on the shared request spec.
-  Never add it per request; every call already gets it from the shared spec.
 - Never put real secrets in requests that are attached to the report: mask them first. The current `api.key` is
   the public demo key.
-- A response that carries personal data (an email, a name, an address) is never logged in full or attached to Allure:
-  its API builds requests on `ecomStatusOnlyRequestSpecification()` (status line only). Decide per API, not per call.
+- A response that carries personal data (an email, a name, an address) is never logged in full: its API builds requests on `ecomStatusOnlyRequestSpecification()` (status line only). Decide per API, not per call.
   The masked config and request logger come from `maskedConfig()` and `maskedRequestLogging()`, never copied.
-- Allure modules are versioned through `allure-bom` (one `allure.version` property). The project stays on the
-  Allure Java 2.x line until the pom targets Java 17, which Allure 3 requires.
 
 ## Checklist before opening a pull request
 
@@ -371,6 +365,6 @@ Feature: Place API
 - [ ] Every negative check can fail: a "no longer found" step fetches the id of the thing that was deleted
 - [ ] Framework logic that the live API can't trigger (retries, failure paths, selection rules) has a unit test, and
   `RetryTest` and `OrphanSweepTest` pass
-- [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt, the Allure
-  results or `target/reporting-labs/index.html`; after adding or changing an API, add any new personal-data key to
+- [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt or
+  `target/reporting-labs/index.html`; after adding or changing an API, add any new personal-data key to
   `reporting-labs.maskKeys` first

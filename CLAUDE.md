@@ -31,7 +31,6 @@ Academy Place API and e-commerce (Product and Order) API. Study project, committ
 - Run all scenarios: `mvn test`, or run `TestRunner` in IntelliJ (green arrow next to the class)
 - Run by tag: `mvn test -Dcucumber.filter.tags="@AddPlace"`
 - Run one scenario: green arrow next to it in the `.feature` file
-- Open the Allure report: Maven tool window → Plugins → allure → `allure:serve` (after running `TestRunner`)
 - Quick report without Maven: open `target/cucumber-reports/cucumber.html` in a browser
 - Reporting Labs report: open `target/reporting-labs/index.html` in a browser (after running `TestRunner`)
 
@@ -61,13 +60,13 @@ Framework, `src/main/java/`:
   cleanup, check, store the id in `TestContext`); injected like `TestContext`
 - `Specification/Specifications` request specs `defaultRequestSpecification()` (Place), `loginRequestSpecification()`
   (unlogged), `ecomRequestSpecification()` (token masked; Product) and `ecomStatusOnlyRequestSpecification()` (token
-  masked, response status only, no Allure; Order), plus the response spec `defaultResponseSpecification()`
+  masked, response status only; Order), plus the response spec `defaultResponseSpecification()`
 - `Utilities/` `ConfigReader` (settings and secrets, from the classpath), `ResponseUtils` (JSON helper), `Retry` and
   `ApiCall` (resend a failed cleanup call on 5xx or network errors)
 
 Tests, `src/test/java/`:
-- `cucumber/Options/TestRunner` JUnit runner: `classpath:features`, glue, `pretty`, Cucumber HTML, Allure and
-  Reporting Labs plugins
+- `cucumber/Options/TestRunner` JUnit runner: `classpath:features`, glue, `pretty`, Cucumber HTML and Reporting
+  Labs plugins
 - `StepDefinition/` one step class per API (`<Name>ApiStepDefinition`), plus `CommonStepDefinition` (http call,
   status, response body) and `LoginStepDefinition` (the "the user is logged in" step)
 - `StepDefinition/Hooks/` one hook class per API (`<Name>Hooks`): `@Before("@Delete<Name>")` creates what the Delete
@@ -80,11 +79,11 @@ Test files, `src/test/resources/`:
 - `features/` one feature file per API (`<Name>Api.feature`)
 - `Global.properties` (settings), `secrets.properties` (credentials, git-ignored; copy `secrets.properties.example`)
 - `files/` (test files, e.g. the placeholder product image), `logback-test.xml` (log format and outputs),
-  `allure.properties` (Allure results folder, `target/allure-results`), `reporting-labs.properties` (report title,
+  `reporting-labs.properties` (report title,
   BDD steps, `maskKeys`)
 
 - Generated, never edit or commit: `target/`, `requestLogs.txt`, `reporting-labs.history.json` (Reporting Labs run
-  history), `.allure/` (Allure tool downloaded by `allure:serve`)
+  history)
 
 ## Conventions (summary; the skill has the full detail)
 
@@ -129,19 +128,19 @@ Test files, `src/test/resources/`:
 - Cleanup log lines (`Cleanup: …`) appear after the last step; a `WARN | Cleanup: could not delete place` line
   means a place may have been left on the live API.
 - Reports are written only when `TestRunner` (or `mvn test`) runs; the green arrow in a `.feature` file ignores
-  `@CucumberOptions`, so no Allure, HTML or Reporting Labs report is produced.
-- `allure:serve` serves the report on the machine's network IP while it runs; stop it when done.
+  `@CucumberOptions`, so no HTML or Reporting Labs report is produced.
 - `@Before` hooks run before the `Background`: a setup hook that needs the e-commerce session gets it from
   `LoginApi.session()` itself, because the "the user is logged in" step has not run yet.
 - The e-commerce API returns 201 for Create Product, and 400 with "Product not found" (not 404) for a missing product;
   the delete endpoint spells it "Product not foundd". Steps check status and message; cleanup uses `startsWith`.
-- Masking the Authorization header needs two settings: the `RequestLoggingFilter` blacklist (requestLogs.txt) and the
-  `LogConfig` blacklist (Allure). Removing either one leaks the token into that output. Both e-commerce specs get them
-  from `maskedConfig()` and `maskedRequestLogging()`; never build a masked spec without them.
+- The `RequestLoggingFilter` blacklist masks the Authorization header in requestLogs.txt; removing it leaks the token.
+  The `LogConfig` blacklist masks it wherever REST Assured's own logging runs (`log()`), a safeguard when debugging.
+  Both e-commerce specs get them from `maskedConfig()` and `maskedRequestLogging()`; never build a masked spec without
+  them. Reporting Labs masks the token itself.
 - Order API responses hold the account email (`orderBy`), so `OrderApi` builds every request on
-  `ecomStatusOnlyRequestSpecification()`: requestLogs.txt shows only `HTTP/1.1 200 OK` for order calls, and the Allure
-  report has no attachments for them. That is intended; the steps still read the full response. Moving an order call
-  back to `ecomRequestSpecification()` leaks the email into both outputs.
+  `ecomStatusOnlyRequestSpecification()`: requestLogs.txt shows only `HTTP/1.1 200 OK` for order calls. That is
+  intended; the steps still read the full response. Moving an order call back to `ecomRequestSpecification()` leaks
+  the email into requestLogs.txt.
 - A missing `secrets.properties`, or a blank key in it, stops the run with a clear error; copy
   `secrets.properties.example` and fill in a test account.
 - The Order API returns 201 with the new id inside an array (`orders[0]`). It fetches by query parameter
@@ -173,8 +172,7 @@ Test files, `src/test/resources/`:
 - `ProductApiDataBuilder.createProductPayload` throws `IllegalArgumentException` for a name without `TEST_PRODUCT_PREFIX`;
   the prefix is what lets the sweep recognise test data.
 - `@BeforeAll` output belongs to no scenario, so the IntelliJ console shows the `Orphan sweep:` lines after the
-  scenarios; the real order is in `target/logs/`. During `@BeforeAll` Allure logs `ERROR | Could not add attachment: no
-  test is running` for each sweep request: harmless, the request is still sent.
+  scenarios; the real order is in `target/logs/`.
 - The Reporting Labs REST Assured add-on records every REST Assured call through a global filter, whatever the spec.
   Personal data is hidden only by `reporting-labs.maskKeys` (key-name substrings; tokens and passwords are masked by
   default, emails are not). A new field with personal data leaks into the report until its key is added there.
@@ -294,3 +292,6 @@ Add one line per decision so future sessions keep it.
   them. Allure is to be removed in its own PR once Reporting Labs has proven itself over a few runs.
 - 2026-11-25: Scenarios carry Reporting Labs metadata tags: `@owner` and `@feature` on each Feature; `@P1 @critical` on
   create and `@P2 @major` on delete scenarios. They are the one exception to PascalCase tags.
+- 2026-11-26: Allure is removed: Reporting Labs is the report (one file, every API call with personal data masked,
+  history across runs, no CLI or server), and Cucumber's single-file HTML report stays as a quick overview. The
+  `LogConfig` masking stays as a safeguard for REST Assured's own `log()`. Earlier Allure decisions are kept as history.

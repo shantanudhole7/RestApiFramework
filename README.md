@@ -16,7 +16,6 @@ built from POJOs and a shared request specification, and every check is logged a
 | Jackson          | Serializes POJOs to JSON request bodies                          |
 | Cucumber + JUnit | BDD scenarios in Gherkin, step definitions, test runner          |
 | PicoContainer    | Injects one shared TestContext per scenario into steps and hooks |
-| Allure           | Test report with every request and response attached per step    |
 | Reporting Labs   | One-file HTML report: scenarios, steps, API calls, history       |
 | SLF4J + Logback  | Framework logging: console and one log file per run              |
 
@@ -60,7 +59,6 @@ RestApiFramework/
 │           ├── Global.properties         # Settings: base URI, API key, cleanup retry, orphan sweep age
 │           ├── secrets.properties.example   # Template for the git-ignored secrets.properties
 │           ├── logback-test.xml          # Log format and outputs
-│           ├── allure.properties         # Allure results folder
 │           └── reporting-labs.properties # Reporting Labs: title, BDD steps, masked keys
 ├── CLAUDE.md                             # Project context and rules for Claude Code
 ├── pom.xml                               # Dependencies and plugins
@@ -71,8 +69,7 @@ RestApiFramework/
 hooks, unit tests, and the feature files and config they read.
 
 Generated and never committed: `target/` (build output, logs and reports), `requestLogs.txt`,
-`reporting-labs.history.json` (Reporting Labs run history) and `.allure/` (the Allure tool downloaded by
-`allure:serve`).
+and `reporting-labs.history.json` (Reporting Labs run history).
 Also never committed: `secrets.properties`, your local credentials.
 
 ---
@@ -150,7 +147,6 @@ Run `TestRunner` (or `mvn test`), then:
 
 | Report         | How to open                                               | What it shows                                                                                                        |
 |----------------|-----------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| Allure         | Maven tool window → Plugins → allure → `allure:serve`     | Scenarios, steps, hooks, timings, and every request and response attached to the step that sent it                   |
 | Cucumber HTML  | Open `target/cucumber-reports/cucumber.html` in a browser | Quick single-file overview, filterable by tag                                                                        |
 | Reporting Labs | Open `target/reporting-labs/index.html` in a browser      | Scenarios, Given/When/Then steps, every API call (personal data masked), priority/owner/feature, history across runs |
 
@@ -181,7 +177,6 @@ Every request starts from one shared specification, built once per run by `Speci
 - base URI and API key from `Global.properties`
 - JSON content type
 - every request and response logged to `requestLogs.txt`
-- every request and response attached to the Allure report (`AllureRestAssured` filter)
 
 ```java
 given().spec(defaultRequestSpecification()).body(payload)
@@ -207,19 +202,19 @@ The HTTP method comes from the feature text (`"POST"`, `"GET"`, case-insensitive
 
 `Specifications` has four request specs:
 
-| Spec                                   | Used for    | What it adds                                                                           |
-|----------------------------------------|-------------|----------------------------------------------------------------------------------------|
-| `defaultRequestSpecification()`        | Place API   | API key, JSON, logging to `requestLogs.txt`, Allure                                    |
-| `ecomRequestSpecification()`           | Product API | Logging and Allure with the `Authorization` header masked; no content type (multipart) |
-| `ecomStatusOnlyRequestSpecification()` | Order API   | Request logged (token masked), response only by its status line, no Allure             |
-| `loginRequestSpecification()`          | Login       | JSON only: no logging and no report, so credentials never reach a file                 |
+| Spec                                   | Used for    | What it adds                                                                |
+|----------------------------------------|-------------|-----------------------------------------------------------------------------|
+| `defaultRequestSpecification()`        | Place API   | API key, JSON, logging to `requestLogs.txt`                                 |
+| `ecomRequestSpecification()`           | Product API | Logging with the `Authorization` header masked; no content type (multipart) |
+| `ecomStatusOnlyRequestSpecification()` | Order API   | Request logged (token masked), response only by its status line             |
+| `loginRequestSpecification()`          | Login       | JSON only: no logging and no report, so credentials never reach a file      |
 
-The token is masked by two settings, because each output reads its own: a `RequestLoggingFilter` blacklist for
-`requestLogs.txt` and a `LogConfig` blacklist for Allure. Both e-commerce specs build them with the same private
-helpers (`maskedConfig()`, `maskedRequestLogging()`), so the mask exists once.
+The token is masked by a `RequestLoggingFilter` blacklist for `requestLogs.txt`, plus a `LogConfig` blacklist that
+masks it wherever REST Assured's own logging runs (`log()`, a safeguard when debugging). Both e-commerce specs build
+them with the same private helpers (`maskedConfig()`, `maskedRequestLogging()`), so the mask exists once.
 
 Order API responses hold the account's email address (`orderBy`), so the Order API uses the status-only spec: its
-responses are never written to `requestLogs.txt` or attached to the Allure report. The tests still read the full
+responses are never written to `requestLogs.txt`. The tests still read the full
 response; logging filters only write a copy. To see an order response while debugging, repeat the call in Postman.
 
 The Reporting Labs report records every REST Assured call (its add-on adds a global filter) and **can** mask single
@@ -395,8 +390,8 @@ Each step maps to a method in `PlaceApiStepDefinition` by its exact text or, for
 - **`the deleted place can no longer be fetched using "GET_PLACE"`** calls `GET_PLACE` with the deleted `place_id`
   and expects 404 Not Found.
 
-`TestRunner` runs every feature file with JUnit, prints each step (`pretty`), and writes the Allure results and the
-Cucumber HTML report (see [Reports](#reports)).
+`TestRunner` runs every feature file with JUnit, prints each step (`pretty`), and writes the Reporting Labs report and
+the Cucumber HTML report (see [Reports](#reports)).
 
 ---
 

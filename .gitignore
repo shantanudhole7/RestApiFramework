@@ -9,8 +9,5 @@ target/
 requestLogs.txt
 reporting-labs.history.json
 
-# Allure command-line tool, downloaded by allure:serve
-.allure/
-
 # Secrets for testing, not checked into source control
 src/test/resources/secrets.properties

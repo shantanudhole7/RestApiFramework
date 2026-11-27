@@ -2,6 +2,7 @@ package Assertion;
 
 import io.restassured.response.Response;
 
+import java.util.List;
 import java.util.Objects;
 
 import static Logger.Log.logError;
@@ -13,6 +14,9 @@ import static java.net.HttpURLConnection.HTTP_OK;
  * Logging assertions: every check logs a PASS or FAIL line with expected and actual values.
  */
 public final class Assertions {
+
+	/** What the check reports when every file follows the rule. */
+	private static final String NO_VIOLATIONS = "no violations";
 
 	private Assertions() {
 		// Prevent instantiation of this utility class
@@ -70,5 +74,20 @@ public final class Assertions {
 	 */
 	public static void assertHttpNotFound(Response response) {
 		assertHttpStatus(response, HTTP_NOT_FOUND);
+	}
+
+	/**
+	 * Assert that a check found no violations. On failure the FAIL line shows how many there are, one per line,
+	 * so every problem is visible in one run.
+	 *
+	 * @param description what is checked, e.g. "Verify every feature has an owner and a feature tag"
+	 * @param violations  one message per violation; empty if the check holds
+	 */
+	public static void assertNoViolations(String description, List<String> violations) {
+		String newLine = System.lineSeparator();
+		String actual = violations.isEmpty()
+				? NO_VIOLATIONS
+				: violations.size() + " violation(s):" + newLine + "  - " + String.join(newLine + "  - ", violations);
+		assertEquals(description, NO_VIOLATIONS, actual);
 	}
 }

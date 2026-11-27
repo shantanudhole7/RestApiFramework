@@ -3,7 +3,9 @@ package Conventions;
 import io.cucumber.gherkin.GherkinParser;
 import io.cucumber.messages.types.Envelope;
 import io.cucumber.messages.types.Feature;
+import io.cucumber.messages.types.FeatureChild;
 import io.cucumber.messages.types.GherkinDocument;
+import io.cucumber.messages.types.Scenario;
 import io.cucumber.messages.types.Tag;
 
 import java.io.IOException;
@@ -41,7 +43,7 @@ final class FeatureFileReader {
 	 */
 	private static List<Path> featureFiles() throws IOException, URISyntaxException {
 		URL featuresFolder = FeatureFileReader.class.getClassLoader()
-		                                                     .getResource("features");
+		                                            .getResource("features");
 		if (featuresFolder == null) {
 			String sourceFolder = "src/test/resources/features";
 			throw new IllegalStateException("Folder 'features' not found on the classpath (" + sourceFolder + ")");
@@ -123,6 +125,33 @@ final class FeatureFileReader {
 		return tags.stream()
 		           .filter(tag -> tag.startsWith(prefix) && tag.length() > prefix.length())
 		           .count();
+	}
+
+	/**
+	 * Describe where a scenario is, for violation messages, e.g. OrderApi.feature:23 Scenario "Delete an order".
+	 *
+	 * @param parsedFeature the feature file the scenario is in
+	 * @param scenario      the scenario
+	 * @return file, line and scenario name
+	 */
+	static String scenarioLocation(ParsedFeature parsedFeature, Scenario scenario) {
+		Long line = scenario.getLocation()
+		                    .getLine();
+		return parsedFeature.getFileName() + ":" + line + " Scenario \"" + scenario.getName() + "\"";
+	}
+
+	/**
+	 * Get the scenarios of a Feature, Scenario Outlines included. Rules are not used in this project's feature files.
+	 *
+	 * @param feature a parsed Feature
+	 * @return its scenarios, in file order
+	 */
+	static List<Scenario> scenarios(Feature feature) {
+		return feature.getChildren()
+		              .stream()
+		              .map(FeatureChild::getScenario)
+		              .flatMap(Optional::stream)
+		              .collect(Collectors.toList());
 	}
 
 	/** A parsed feature file: its Feature and the file name used in violation messages. */

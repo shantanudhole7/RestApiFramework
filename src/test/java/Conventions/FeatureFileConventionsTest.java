@@ -1,9 +1,11 @@
 package Conventions;
 
 import Conventions.FeatureFileReader.ParsedFeature;
+import io.cucumber.messages.types.Feature;
 import io.cucumber.messages.types.Scenario;
 import io.cucumber.messages.types.Step;
 import io.cucumber.messages.types.StepKeywordType;
+import io.cucumber.messages.types.Tag;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -11,10 +13,21 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static Assertion.Assertions.assertNoViolations;
+import static Conventions.FeatureFileReader.FEATURE_TAG;
+import static Conventions.FeatureFileReader.OWNER_TAG;
+import static Conventions.FeatureFileReader.PRIORITY_TAGS;
+import static Conventions.FeatureFileReader.SEVERITY_TAGS;
+import static Conventions.FeatureFileReader.apiTag;
 import static Conventions.FeatureFileReader.countTagsWithValue;
+import static Conventions.FeatureFileReader.expectedTags;
+import static Conventions.FeatureFileReader.featureLocation;
+import static Conventions.FeatureFileReader.featureName;
+import static Conventions.FeatureFileReader.featureTags;
 import static Conventions.FeatureFileReader.features;
+import static Conventions.FeatureFileReader.isAllowedTag;
 import static Conventions.FeatureFileReader.scenarioLocation;
 import static Conventions.FeatureFileReader.scenarios;
 import static Conventions.FeatureFileReader.tagNames;
@@ -25,35 +38,27 @@ import static Conventions.FeatureFileReader.tagNames;
  */
 public class FeatureFileConventionsTest {
 
-	/** Tag prefix naming the scenario's owner in the Reporting Labs report, e.g. @owner:Shantanu. */
-	private static final String OWNER_TAG = "@owner:";
-
-	/** Tag prefix naming the feature area in the Reporting Labs report, e.g. @feature:Place. */
-	private static final String FEATURE_TAG = "@feature:";
-
-	/** Priority tags Reporting Labs ranks failures by; @P0 is the highest. */
-	private static final List<String> PRIORITY_TAGS = List.of("@P0", "@P1", "@P2", "@P3", "@P4");
-
-	/** Severity tags Reporting Labs understands. */
-	private static final List<String> SEVERITY_TAGS = List.of("@blocker", "@critical", "@major", "@minor", "@trivial");
-
-	/** Every Feature names exactly one owner and one feature area, for the Reporting Labs report. */
+	/** Every Feature names exactly one owner and one feature area, and carries the API tag that matches its area. */
 	@Test
-	public void everyFeatureHasOwnerAndFeatureTags() throws IOException, URISyntaxException {
+	public void everyFeatureHasOwnerFeatureAndApiTags() throws IOException, URISyntaxException {
 		List<String> violations = new ArrayList<>();
 		for (ParsedFeature parsedFeature : features()) {
 			List<String> tags = tagNames(parsedFeature.getFeature()
 			                                          .getTags());
-			String where = parsedFeature.getFileName() + ": Feature \"" + parsedFeature.getFeature()
-			                                                                           .getName() + "\"";
+			String where = featureLocation(parsedFeature);
 			if (countTagsWithValue(tags, OWNER_TAG) != 1) {
 				violations.add(where + " needs exactly one " + OWNER_TAG + "<Name> tag");
 			}
 			if (countTagsWithValue(tags, FEATURE_TAG) != 1) {
 				violations.add(where + " needs exactly one " + FEATURE_TAG + "<Name> tag");
 			}
+			Optional<String> featureName = featureName(tags);
+			if (featureName.isPresent() && !tags.contains(apiTag(featureName.get()))) {
+				String needs = " needs the tag " + apiTag(featureName.get()) + " to match " + FEATURE_TAG;
+				violations.add(where + needs + featureName.get());
+			}
 		}
-		assertNoViolations("Verify every feature has an owner and a feature tag", violations);
+		assertNoViolations("Verify every feature has an owner, a feature and a matching API tag", violations);
 	}
 
 	/** Every Scenario has exactly one priority and one severity, so the report can rank failures. */
@@ -99,5 +104,39 @@ public class FeatureFileConventionsTest {
 			}
 		}
 		assertNoViolations("Verify every scenario has a Then step", violations);
+	}
+
+	/**
+	 * Every tag is allowed for its feature: the feature's API tag, an action on the feature (@CreateOrder), a run tag,
+	 * a priority, a severity, or @owner/@feature. Catches typos (@Smokea) and tags copied from another API.
+	 * A file without a @feature: tag is skipped here; everyFeatureHasOwnerFeatureAndApiTags reports it.
+	 */
+	@Test
+	public void everyTagIsAllowedForItsFeature() throws IOException, URISyntaxException {
+		List<String> violations = new ArrayList<>();
+		for (ParsedFeature parsedFeature : features()) {
+			Feature feature = parsedFeature.getFeature();
+			Optional<String> featureName = featureName(tagNames(feature.getTags()));
+			if (featureName.isEmpty()) {
+				continue;
+			}
+			Set<String> featureTags = featureTags(featureName.get());
+			String notAllowed = " is not allowed here; expected " + expectedTags(featureName.get());
+			String featureWhere = featureLocation(parsedFeature);
+			for (Tag tag : feature.getTags()) {
+				if (!isAllowedTag(tag.getName(), featureTags)) {
+					violations.add(featureWhere + " tag " + tag.getName() + notAllowed);
+				}
+			}
+			for (Scenario scenario : scenarios(feature)) {
+				String where = scenarioLocation(parsedFeature, scenario);
+				for (Tag tag : scenario.getTags()) {
+					if (!isAllowedTag(tag.getName(), featureTags)) {
+						violations.add(where + " tag " + tag.getName() + notAllowed);
+					}
+				}
+			}
+		}
+		assertNoViolations("Verify every tag is allowed for its feature", violations);
 	}
 }

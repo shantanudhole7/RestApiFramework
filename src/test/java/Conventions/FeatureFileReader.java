@@ -17,21 +17,53 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/** Finds the feature files on the classpath and parses them with Cucumber's Gherkin parser. */
+/**
+ * Finds the feature files on the classpath, parses them with Cucumber's Gherkin parser, and holds the
+ * project's tag rules.
+ */
 final class FeatureFileReader {
-
-	private FeatureFileReader() {
-		// Prevent instantiation of this utility class
-	}
 
 	/** Reads feature files into their document tree; the file text and compiled pickles are not needed. */
 	private static final GherkinParser PARSER = GherkinParser.builder()
 	                                                         .includeSource(false)
 	                                                         .includePickles(false)
 	                                                         .build();
+
+	/** Tag prefix naming the scenario's owner in the Reporting Labs report, e.g. @owner:Shantanu. */
+	static final String OWNER_TAG = "@owner:";
+
+	/** Tag prefix naming the feature area in the Reporting Labs report, e.g. @feature:Place. */
+	static final String FEATURE_TAG = "@feature:";
+
+	/** @owner: and @feature: tags; the value is a name of letters, digits, _ or -. */
+	private static final Pattern METADATA_TAG = Pattern.compile("@(?:owner|feature):[A-Za-z0-9_-]+");
+
+	/** Priority tags Reporting Labs ranks failures by; @P0 is the highest. */
+	static final List<String> PRIORITY_TAGS = List.of("@P0", "@P1", "@P2", "@P3", "@P4");
+
+	/**
+	 * Severity tags this project uses, from most to least severe. Reporting Labs also knows @normal; this project
+	 * does not use it.
+	 */
+	static final List<String> SEVERITY_TAGS = List.of("@blocker", "@critical", "@major", "@minor", "@trivial");
+
+	/** Tags that select a kind of run, independent of the API. */
+	private static final Set<String> RUN_TAGS = Set.of("@Smoke");
+
+	/**
+	 * Actions a scenario tag may name together with its feature, e.g. @CreateOrder, @DeletePlace. Add a verb when a
+	 * new kind of scenario appears; a new API needs no change.
+	 */
+	private static final List<String> ACTION_VERBS = List.of("Add", "Create", "Delete");
+
+	private FeatureFileReader() {
+		// Prevent instantiation of this utility class
+	}
 
 	/**
 	 * Find every feature file under classpath:features, the folder the runner reads.
@@ -152,6 +184,80 @@ final class FeatureFileReader {
 		              .map(FeatureChild::getScenario)
 		              .flatMap(Optional::stream)
 		              .collect(Collectors.toList());
+	}
+
+	/**
+	 * Check whether a tag is allowed in a feature file.
+	 *
+	 * @param tag         the tag name, with its @
+	 * @param featureTags the tags of this file's feature area (API and action tags)
+	 * @return true if the tag is allowed
+	 */
+	static boolean isAllowedTag(String tag, Set<String> featureTags) {
+		boolean featureOrRunTag = featureTags.contains(tag) || RUN_TAGS.contains(tag);
+		boolean rankingTag = PRIORITY_TAGS.contains(tag) || SEVERITY_TAGS.contains(tag);
+		return featureOrRunTag || rankingTag || METADATA_TAG.matcher(tag)
+		                                                    .matches();
+	}
+
+	/**
+	 * Read the feature area from the @feature: tag, e.g. "Order" from @feature:Order.
+	 *
+	 * @param tags the Feature's tag names
+	 * @return the feature area, or empty if there is no @feature: tag with a value
+	 */
+	static Optional<String> featureName(List<String> tags) {
+		return tags.stream()
+		           .filter(tag -> tag.startsWith(FEATURE_TAG) && tag.length() > FEATURE_TAG.length())
+		           .map(tag -> tag.substring(FEATURE_TAG.length()))
+		           .findFirst();
+	}
+
+	/**
+	 * Build the tags a feature area allows: its API tag and one action tag per verb, e.g. @OrderApi, @CreateOrder.
+	 *
+	 * @param featureName the feature area, e.g. "Order"
+	 * @return the feature-specific tags
+	 */
+	static Set<String> featureTags(String featureName) {
+		Set<String> tags = ACTION_VERBS.stream()
+		                               .map(verb -> "@" + verb + featureName)
+		                               .collect(Collectors.toSet());
+		tags.add(apiTag(featureName));
+		return tags;
+	}
+
+	/**
+	 * Build the API tag of a feature area, e.g. @OrderApi for Order.
+	 *
+	 * @param featureName the feature area, e.g. "Order"
+	 * @return the API tag
+	 */
+	static String apiTag(String featureName) {
+		return "@" + featureName + "Api";
+	}
+
+	/**
+	 * Describe the allowed tags for a violation message.
+	 *
+	 * @param featureName the feature area, e.g. "Order"
+	 * @return e.g. "@OrderApi, @<Add|Create|Delete>Order, a run tag [@Smoke], a priority, a severity or @owner/@feature"
+	 */
+	static String expectedTags(String featureName) {
+		String actionTags = "@<" + String.join("|", ACTION_VERBS) + ">" + featureName;
+		String otherTags = "a run tag " + RUN_TAGS + ", a priority, a severity or @owner/@feature";
+		return apiTag(featureName) + ", " + actionTags + ", " + otherTags;
+	}
+
+	/**
+	 * Describe where a Feature is, for violation messages, e.g. OrderApi.feature: Feature "Order API".
+	 *
+	 * @param parsedFeature the parsed feature file
+	 * @return file and Feature name
+	 */
+	static String featureLocation(ParsedFeature parsedFeature) {
+		return parsedFeature.getFileName() + ": Feature \"" + parsedFeature.getFeature()
+		                                                                   .getName() + "\"";
 	}
 
 	/** A parsed feature file: its Feature and the file name used in violation messages. */

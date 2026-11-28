@@ -254,10 +254,11 @@ Feature: Place API
 - A scenario that changes data verifies the change with a follow-up read, not just the call's own response:
   after Add, GET finds the place; after Delete, GET no longer finds it.
 - Tags are enforced by `FeatureFileConventionsTest`: every Feature has `@owner:<Name>`, `@feature:<Name>` and the
-  matching API tag (`@feature:Place` → `@PlaceApi`); every scenario has an action tag (`@<Add|Create|Delete><Feature>`),
-  a run tag (`@Smoke`), exactly one priority (`@P0`–`@P4`), exactly one severity (`@blocker`, `@critical`, `@major`,
+  matching API tag (`@feature:Place` → `@PlaceApi`); every scenario has exactly one action tag
+  (`@<Add|Create|Delete><Feature>`), at least one run tag (`@Smoke`), exactly one priority (`@P0`–`@P4`), exactly one severity (`@blocker`, `@critical`, `@major`,
   `@minor`, `@trivial`) and at least one `Then` step. Any other tag fails the build; a new verb or run tag is added to
-  `ACTION_VERBS` / `RUN_TAGS` in `FeatureFileReader` on purpose.
+  `ACTION_VERBS` / `RUN_TAGS` in `FeatureFileReader` on purpose. `@owner:`/`@feature:` go on the Feature only; tags
+  never go on an `Examples:` block; `Rule:` blocks are not supported (the tests stop with an error).
 - Steps are written in plain language. Values are passed as quoted strings or numbers, never as code
   (`"Engineer"`, not `"['Engineer']"`).
 

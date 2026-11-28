@@ -282,10 +282,12 @@ the build instead of being caught in review. It parses the files with Cucumber's
 | `everyFeatureHasOwnerFeatureAndApiTags` | exactly one `@owner:<Name>` and `@feature:<Name>`, plus the matching API tag (`@feature:Order` needs `@OrderApi`) |
 | `everyScenarioHasPriorityAndSeverity`   | exactly one priority (`@P0`–`@P4`) and one severity (`@blocker`, `@critical`, `@major`, `@minor`, `@trivial`) |
 | `everyScenarioHasAThenStep`             | at least one `Then` step                                                       |
-| `everyTagIsAllowedForItsFeature`        | each tag is the feature's API tag, an action on it (`@Add`, `@Create` or `@Delete` + feature), a run tag (`@Smoke`), a priority, a severity or `@owner`/`@feature` |
+| `everyScenarioHasActionAndRunTag`       | exactly one action tag (`@Add`, `@Create` or `@Delete` + feature) and at least one run tag (`@Smoke`) |
+| `everyTagIsAllowedForItsFeature`        | each tag is the feature's API tag, an action on it, a run tag, a priority, a severity, or (on the Feature only) `@owner`/`@feature`; no tags on `Examples:` blocks |
 
 Each rule reports every violation at once, one per line, with the file, line and scenario
-(`Assertions.assertNoViolations`). To add a tag: a new API needs no change; a new kind of scenario adds its verb to
+(`Assertions.assertNoViolations`). Tags go on the Feature or the Scenario, never on an `Examples:` block, so every
+"exactly one" count sees them. A file with a `Rule:` block stops the tests with an error instead of being skipped. To add a tag: a new API needs no change; a new kind of scenario adds its verb to
 `ACTION_VERBS`, and a new kind of run adds its tag to `RUN_TAGS` (both in `FeatureFileReader`).
 
 ### Scenario state, hooks and the API layer

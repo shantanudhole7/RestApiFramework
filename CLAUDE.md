@@ -75,8 +75,8 @@ Tests, `src/test/java/`:
   `@BeforeAll` runs the orphan sweep
 - `Cleanup/OrphanSweepTest`, `Utilities/RetryTest` unit tests of framework code, in the same package as the class they
   test
-- `Conventions/FeatureFileConventionsTest` convention tests of the feature files (owner, feature and API tags,
-  priority, severity, a Then step, allowed tags); `Conventions/FeatureFileReader` finds and parses the files and holds
+- `Conventions/FeatureFileConventionsTest` convention tests of the feature files (5 rules: owner, feature and API
+  tags; priority and severity; a Then step; action and run tags; allowed tags); `Conventions/FeatureFileReader` finds and parses the files and holds
   the tag rules (`ACTION_VERBS`, `RUN_TAGS`, `PRIORITY_TAGS`, `SEVERITY_TAGS`)
 
 Test files, `src/test/resources/`:
@@ -164,7 +164,9 @@ Test files, `src/test/resources/`:
   with `TestRunner`.
 - A new or changed tag fails `FeatureFileConventionsTest` until it fits the rules; the message lists what is allowed.
   A new API needs no change (`@feature:Cart` allows `@CartApi`, `@CreateCart`, …); a new verb goes in `ACTION_VERBS`,
-  a new run tag in `RUN_TAGS`. `@normal` severity is not used on purpose.
+  a new run tag in `RUN_TAGS`. `@normal` severity is not used on purpose. `@owner:`/`@feature:` are allowed on the
+  Feature only, tags on `Examples:` blocks are reported (they would escape the "exactly one" counts), and a `Rule:`
+  block stops the tests with an error, because its scenarios would otherwise go unchecked.
 - Config and feature files are read from the build output (`target/test-classes`), which the build copies from
   `src/test/resources`. If an edit seems ignored, run Build → Rebuild Project.
 - Framework code in `src/main/java` can't see test-scoped libraries (Cucumber, JUnit): code that needs them belongs in

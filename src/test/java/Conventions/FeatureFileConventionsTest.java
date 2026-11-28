@@ -1,6 +1,7 @@
 package Conventions;
 
 import Conventions.FeatureFileReader.ParsedFeature;
+import io.cucumber.messages.types.Examples;
 import io.cucumber.messages.types.Feature;
 import io.cucumber.messages.types.Scenario;
 import io.cucumber.messages.types.Step;
@@ -19,7 +20,10 @@ import static Assertion.Assertions.assertNoViolations;
 import static Conventions.FeatureFileReader.FEATURE_TAG;
 import static Conventions.FeatureFileReader.OWNER_TAG;
 import static Conventions.FeatureFileReader.PRIORITY_TAGS;
+import static Conventions.FeatureFileReader.RUN_TAGS;
 import static Conventions.FeatureFileReader.SEVERITY_TAGS;
+import static Conventions.FeatureFileReader.actionTagPattern;
+import static Conventions.FeatureFileReader.actionTags;
 import static Conventions.FeatureFileReader.apiTag;
 import static Conventions.FeatureFileReader.countTagsWithValue;
 import static Conventions.FeatureFileReader.expectedTags;
@@ -37,6 +41,9 @@ import static Conventions.FeatureFileReader.tagNames;
  * require. Parses the files with Cucumber's Gherkin parser; calls no API.
  */
 public class FeatureFileConventionsTest {
+
+	/** Why a tag on an Examples block is reported: tags belong on the Scenario, where the counts look. */
+	private static final String TAG_ON_EXAMPLES = " is on an Examples block; put tags on the Scenario";
 
 	/** Every Feature names exactly one owner and one feature area, and carries the API tag that matches its area. */
 	@Test
@@ -110,6 +117,7 @@ public class FeatureFileConventionsTest {
 	 * Every tag is allowed for its feature: the feature's API tag, an action on the feature (@CreateOrder), a run tag,
 	 * a priority, a severity, or @owner/@feature. Catches typos (@Smokea) and tags copied from another API.
 	 * A file without a @feature: tag is skipped here; everyFeatureHasOwnerFeatureAndApiTags reports it.
+	 * Tags on an Examples block are not allowed; they belong on the Scenario.
 	 */
 	@Test
 	public void everyTagIsAllowedForItsFeature() throws IOException, URISyntaxException {
@@ -124,19 +132,57 @@ public class FeatureFileConventionsTest {
 			String notAllowed = " is not allowed here; expected " + expectedTags(featureName.get());
 			String featureWhere = featureLocation(parsedFeature);
 			for (Tag tag : feature.getTags()) {
-				if (!isAllowedTag(tag.getName(), featureTags)) {
+				if (!isAllowedTag(tag.getName(), featureTags, true)) {
 					violations.add(featureWhere + " tag " + tag.getName() + notAllowed);
 				}
 			}
 			for (Scenario scenario : scenarios(feature)) {
 				String where = scenarioLocation(parsedFeature, scenario);
 				for (Tag tag : scenario.getTags()) {
-					if (!isAllowedTag(tag.getName(), featureTags)) {
+					if (!isAllowedTag(tag.getName(), featureTags, false)) {
 						violations.add(where + " tag " + tag.getName() + notAllowed);
+					}
+				}
+				for (Examples examples : scenario.getExamples()) {
+					for (Tag tag : examples.getTags()) {
+						violations.add(where + " tag " + tag.getName() + TAG_ON_EXAMPLES);
 					}
 				}
 			}
 		}
 		assertNoViolations("Verify every tag is allowed for its feature", violations);
+	}
+
+	/**
+	 * Every Scenario says what it does (one action tag for its feature) and in which runs it takes part (a run tag).
+	 * A file without a @feature: tag is skipped here; everyFeatureHasOwnerFeatureAndApiTags reports it.
+	 */
+	@Test
+	public void everyScenarioHasActionAndRunTag() throws IOException, URISyntaxException {
+		List<String> violations = new ArrayList<>();
+		for (ParsedFeature parsedFeature : features()) {
+			Feature feature = parsedFeature.getFeature();
+			Optional<String> featureName = featureName(tagNames(feature.getTags()));
+			if (featureName.isEmpty()) {
+				continue;
+			}
+			Set<String> actionTags = actionTags(featureName.get());
+			for (Scenario scenario : scenarios(feature)) {
+				String where = scenarioLocation(parsedFeature, scenario);
+				List<String> tags = tagNames(scenario.getTags());
+				long actionTagCount = tags.stream()
+				                          .filter(actionTags::contains)
+				                          .count();
+				if (actionTagCount != 1) {
+					String expected = actionTagPattern(featureName.get());
+					violations.add(where + " needs exactly one action tag (" + expected + ")");
+				}
+				if (tags.stream()
+				        .noneMatch(RUN_TAGS::contains)) {
+					violations.add(where + " needs a run tag " + RUN_TAGS);
+				}
+			}
+		}
+		assertNoViolations("Verify every scenario has an action tag and a run tag", violations);
 	}
 }

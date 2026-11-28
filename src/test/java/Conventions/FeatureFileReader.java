@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -40,7 +41,7 @@ final class FeatureFileReader {
 	/** Tag prefix naming the feature area in the Reporting Labs report, e.g. @feature:Place. */
 	static final String FEATURE_TAG = "@feature:";
 
-	/** @owner: and @feature: tags; the value is a name of letters, digits, _ or -. */
+	/** {@code @owner:} and {@code @feature:} tags; the value is a name of letters, digits, _ or -. */
 	private static final Pattern METADATA_TAG = Pattern.compile("@(?:owner|feature):[A-Za-z0-9_-]+");
 
 	/** Priority tags Reporting Labs ranks failures by; @P0 is the highest. */
@@ -53,13 +54,13 @@ final class FeatureFileReader {
 	static final List<String> SEVERITY_TAGS = List.of("@blocker", "@critical", "@major", "@minor", "@trivial");
 
 	/** Tags that select a kind of run, independent of the API. */
-	private static final Set<String> RUN_TAGS = Set.of("@Smoke");
+	static final Set<String> RUN_TAGS = Set.of("@Smoke");
 
 	/**
 	 * Actions a scenario tag may name together with its feature, e.g. @CreateOrder, @DeletePlace. Add a verb when a
 	 * new kind of scenario appears; a new API needs no change.
 	 */
-	private static final List<String> ACTION_VERBS = List.of("Add", "Create", "Delete");
+	static final List<String> ACTION_VERBS = List.of("Add", "Create", "Delete");
 
 	private FeatureFileReader() {
 		// Prevent instantiation of this utility class
@@ -101,7 +102,7 @@ final class FeatureFileReader {
 	 * @return one ParsedFeature per file
 	 * @throws IOException           if a file cannot be read
 	 * @throws URISyntaxException    if the features folder's location is not a valid URI
-	 * @throws IllegalStateException if a file cannot be parsed or has no Feature
+	 * @throws IllegalStateException if a file cannot be parsed, has no Feature, or contains a Rule
 	 */
 	static List<ParsedFeature> features() throws IOException, URISyntaxException {
 		List<ParsedFeature> result = new ArrayList<>();
@@ -129,6 +130,13 @@ final class FeatureFileReader {
 			                           .flatMap(Optional::stream)
 			                           .findFirst()
 			                           .orElseThrow(() -> new IllegalStateException(noFeature));
+			boolean hasRule = feature.getChildren()
+			                         .stream()
+			                         .anyMatch(child -> child.getRule()
+			                                                 .isPresent());
+			if (hasRule) {
+				throw new IllegalStateException(fileName + ": Rule blocks are not supported by the convention tests");
+			}
 			result.add(new ParsedFeature(fileName, feature));
 		}
 		return result;
@@ -173,7 +181,8 @@ final class FeatureFileReader {
 	}
 
 	/**
-	 * Get the scenarios of a Feature, Scenario Outlines included. Rules are not used in this project's feature files.
+	 * Get the scenarios of a Feature, Scenario Outlines included. features() rejects Rule blocks, so all scenarios
+	 * are direct children.
 	 *
 	 * @param feature a parsed Feature
 	 * @return its scenarios, in file order
@@ -191,13 +200,15 @@ final class FeatureFileReader {
 	 *
 	 * @param tag         the tag name, with its @
 	 * @param featureTags the tags of this file's feature area (API and action tags)
+	 * @param onFeature   true for a tag on the Feature line, where @owner: and @feature: belong
 	 * @return true if the tag is allowed
 	 */
-	static boolean isAllowedTag(String tag, Set<String> featureTags) {
+	static boolean isAllowedTag(String tag, Set<String> featureTags, boolean onFeature) {
 		boolean featureOrRunTag = featureTags.contains(tag) || RUN_TAGS.contains(tag);
 		boolean rankingTag = PRIORITY_TAGS.contains(tag) || SEVERITY_TAGS.contains(tag);
-		return featureOrRunTag || rankingTag || METADATA_TAG.matcher(tag)
-		                                                    .matches();
+		boolean metadataTag = onFeature && METADATA_TAG.matcher(tag)
+		                                               .matches();
+		return featureOrRunTag || rankingTag || metadataTag;
 	}
 
 	/**
@@ -214,17 +225,27 @@ final class FeatureFileReader {
 	}
 
 	/**
-	 * Build the tags a feature area allows: its API tag and one action tag per verb, e.g. @OrderApi, @CreateOrder.
+	 * Build the tags a feature area allows: its API tag and its action tags, e.g. @OrderApi, @CreateOrder.
 	 *
 	 * @param featureName the feature area, e.g. "Order"
 	 * @return the feature-specific tags
 	 */
 	static Set<String> featureTags(String featureName) {
-		Set<String> tags = ACTION_VERBS.stream()
-		                               .map(verb -> "@" + verb + featureName)
-		                               .collect(Collectors.toSet());
+		Set<String> tags = new HashSet<>(actionTags(featureName));
 		tags.add(apiTag(featureName));
 		return tags;
+	}
+
+	/**
+	 * Build the action tags a feature area allows, one per verb, e.g. @AddOrder, @CreateOrder, @DeleteOrder.
+	 *
+	 * @param featureName the feature area, e.g. "Order"
+	 * @return the action tags
+	 */
+	static Set<String> actionTags(String featureName) {
+		return ACTION_VERBS.stream()
+		                   .map(verb -> "@" + verb + featureName)
+		                   .collect(Collectors.toSet());
 	}
 
 	/**
@@ -241,12 +262,22 @@ final class FeatureFileReader {
 	 * Describe the allowed tags for a violation message.
 	 *
 	 * @param featureName the feature area, e.g. "Order"
-	 * @return e.g. "@OrderApi, @<Add|Create|Delete>Order, a run tag [@Smoke], a priority, …
+	 * @return e.g. {@code "@OrderApi, @<Add|Create|Delete>Order, a run tag [@Smoke], a priority, …"}
 	 */
 	static String expectedTags(String featureName) {
-		String actionTags = "@<" + String.join("|", ACTION_VERBS) + ">" + featureName;
+		String actionTags = actionTagPattern(featureName);
 		String otherTags = "a run tag " + RUN_TAGS + ", a priority, a severity or @owner/@feature";
 		return apiTag(featureName) + ", " + actionTags + ", " + otherTags;
+	}
+
+	/**
+	 * Describe a feature's action tags as a pattern for messages, e.g. @<Add|Create|Delete>Order.
+	 *
+	 * @param featureName the feature area, e.g. "Order"
+	 * @return the pattern, built from ACTION_VERBS
+	 */
+	static String actionTagPattern(String featureName) {
+		return "@<" + String.join("|", ACTION_VERBS) + ">" + featureName;
 	}
 
 	/**
@@ -270,10 +301,12 @@ final class FeatureFileReader {
 			this.feature = feature;
 		}
 
+		/** @return the parsed Feature */
 		public Feature getFeature() {
 			return feature;
 		}
 
+		/** @return the file name, for violation messages */
 		public String getFileName() {
 			return fileName;
 		}

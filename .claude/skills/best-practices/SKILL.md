@@ -32,6 +32,7 @@ src/
 │   │   └── Hooks/                              # One hook class per API (<Name>Hooks): setup and cleanup;
 │   │                                           # CommonHooks: hooks for the whole run (@BeforeAll orphan sweep)
 │   ├── Cleanup/OrphanSweepTest                 # Unit tests, in the package of the class they test
+│   ├── Conventions/                            # Convention tests of the feature files (FeatureFileConventionsTest)
 │   └── Utilities/RetryTest
 └── test/resources/                             # Non-Java files the tests read, from the classpath
     ├── features/                               # One feature file per API (<Name>Api.feature)
@@ -149,6 +150,8 @@ src/
     requestLogs.txt; it never logs the body. Assert the exact code from the API contract, not just "any 2xx".
   - `assertHttpOk(response)` (200) and `assertHttpNotFound(response)` (404) are named shortcuts for it. Add a new
     shortcut only for a status that several steps check.
+  - `assertNoViolations(description, violations)` for checks that collect problems (convention tests): every
+    violation is reported in one run, one per line.
 - All of them log `PASS | ...` or `FAIL | ...` with expected and actual values, then throw an `AssertionError` on failure.
 - Don't call JUnit's `assertEquals` directly in tests; the result would not be logged.
 - **Expected before actual**, always. Reversed, failures read the wrong way round.
@@ -230,11 +233,11 @@ Never commit build output, IDE files or local secrets. `.gitignore` covers:
 ### Feature files
 
 ```gherkin
-@PlaceApi
+@PlaceApi @owner:Shantanu @feature:Place
 Feature: Place API
   Add, get and delete places through the Place API.
 
-  @AddPlace @Smoke
+  @AddPlace @Smoke @P1 @critical
   Scenario Outline: Add a place and verify it can be fetched
     Given Add Place payload with "<Name>" "<Address>" "<Phone Number>" "<Language>" "<Website>" "<Types>"
     When User calls "ADD_PLACE" with "POST" http request
@@ -250,7 +253,11 @@ Feature: Place API
 - Scenario names say what is verified, as a short sentence that matches the steps actually in it.
 - A scenario that changes data verifies the change with a follow-up read, not just the call's own response:
   after Add, GET finds the place; after Delete, GET no longer finds it.
-- Every scenario has an area tag (`@AddPlace`) and a suite tag (`@Smoke` or `@Regression`).
+- Tags are enforced by `FeatureFileConventionsTest`: every Feature has `@owner:<Name>`, `@feature:<Name>` and the
+  matching API tag (`@feature:Place` → `@PlaceApi`); every scenario has an action tag (`@<Add|Create|Delete><Feature>`),
+  a run tag (`@Smoke`), exactly one priority (`@P0`–`@P4`), exactly one severity (`@blocker`, `@critical`, `@major`,
+  `@minor`, `@trivial`) and at least one `Then` step. Any other tag fails the build; a new verb or run tag is added to
+  `ACTION_VERBS` / `RUN_TAGS` in `FeatureFileReader` on purpose.
 - Steps are written in plain language. Values are passed as quoted strings or numbers, never as code
   (`"Engineer"`, not `"['Engineer']"`).
 
@@ -365,6 +372,7 @@ Feature: Place API
 - [ ] Every negative check can fail: a "no longer found" step fetches the id of the thing that was deleted
 - [ ] Framework logic that the live API can't trigger (retries, failure paths, selection rules) has a unit test, and
   `RetryTest` and `OrphanSweepTest` pass
+- [ ] `FeatureFileConventionsTest` passes (tags and Then steps of every feature file)
 - [ ] After a run that calls the e-commerce API, no token, password or email appears in requestLogs.txt or
   `target/reporting-labs/index.html`; after adding or changing an API, add any new personal-data key to
   `reporting-labs.maskKeys` first

@@ -46,7 +46,8 @@ Framework, `src/main/java/`:
   stores the response, registers created ids for cleanup) and `LoginApi` (logs in once per run, caches the session)
 - `ApiDataBuilder/` one Test Data Builder per API (`<Name>ApiDataBuilder`): payloads, custom or default
 - `Assertion/Assertions` logging assertions: `assertEquals(description, expected, actual)`,
-  `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404); throws
+  `assertHttpStatus(response, code)` and its shortcuts `assertHttpOk` (200) and `assertHttpNotFound` (404),
+  `assertNoViolations(description, violations)` (one violation per line); throws
   `AssertionError` itself, no test library
 - `Cleanup/OrphanSweep` deletes test data that earlier runs left on the e-commerce API (see Gotchas); its selection
   rules are package-private for the unit tests
@@ -74,6 +75,9 @@ Tests, `src/test/java/`:
   `@BeforeAll` runs the orphan sweep
 - `Cleanup/OrphanSweepTest`, `Utilities/RetryTest` unit tests of framework code, in the same package as the class they
   test
+- `Conventions/FeatureFileConventionsTest` convention tests of the feature files (owner, feature and API tags,
+  priority, severity, a Then step, allowed tags); `Conventions/FeatureFileReader` finds and parses the files and holds
+  the tag rules (`ACTION_VERBS`, `RUN_TAGS`, `PRIORITY_TAGS`, `SEVERITY_TAGS`)
 
 Test files, `src/test/resources/`:
 - `features/` one feature file per API (`<Name>Api.feature`)
@@ -156,7 +160,11 @@ Test files, `src/test/resources/`:
 - `cleanup.retry.attempts` must be at least 1 (`Retry` rejects 0, which would otherwise retry forever).
 - "Kept product" depends on hook order: `OrderHooks` (`@After(order = 20000)`) must run before `ProductHooks` to leave
   the `markCleanupFailed` note. Removing that order breaks the protection silently.
-- `RetryTest` and `OrphanSweepTest` run without the API; `mvn test` runs them together with `TestRunner`.
+- `RetryTest`, `OrphanSweepTest` and `FeatureFileConventionsTest` run without the API; `mvn test` runs them together
+  with `TestRunner`.
+- A new or changed tag fails `FeatureFileConventionsTest` until it fits the rules; the message lists what is allowed.
+  A new API needs no change (`@feature:Cart` allows `@CartApi`, `@CreateCart`, …); a new verb goes in `ACTION_VERBS`,
+  a new run tag in `RUN_TAGS`. `@normal` severity is not used on purpose.
 - Config and feature files are read from the build output (`target/test-classes`), which the build copies from
   `src/test/resources`. If an edit seems ignored, run Build → Rebuild Project.
 - Framework code in `src/main/java` can't see test-scoped libraries (Cucumber, JUnit): code that needs them belongs in
@@ -295,3 +303,8 @@ Add one line per decision so future sessions keep it.
 - 2026-11-26: Allure is removed: Reporting Labs is the report (one file, every API call with personal data masked,
   history across runs, no CLI or server), and Cucumber's single-file HTML report stays as a quick overview. The
   `LogConfig` masking stays as a safeguard for REST Assured's own `log()`. Earlier Allure decisions are kept as history.
+- 2026-11-28: Feature files are checked by convention tests (`Conventions/FeatureFileConventionsTest`, Gherkin
+  parser, no API), so the tag and step rules are enforced in `mvn test` and later in CI, not only in review. Allowed
+  tags are derived from the `@feature:` value (API tag and `@<Verb><Feature>` action tags) instead of a list of every
+  tag; only verbs, run tags, priorities and severities are listed. Violations are reported all at once through
+  `Assertions.assertNoViolations`.

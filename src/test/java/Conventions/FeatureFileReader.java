@@ -241,7 +241,7 @@ final class FeatureFileReader {
 	 * Describe the allowed tags for a violation message.
 	 *
 	 * @param featureName the feature area, e.g. "Order"
-	 * @return e.g. "@OrderApi, @<Add|Create|Delete>Order, a run tag [@Smoke], a priority, a severity or @owner/@feature"
+	 * @return e.g. "@OrderApi, @<Add|Create|Delete>Order, a run tag [@Smoke], a priority, …
 	 */
 	static String expectedTags(String featureName) {
 		String actionTags = "@<" + String.join("|", ACTION_VERBS) + ">" + featureName;

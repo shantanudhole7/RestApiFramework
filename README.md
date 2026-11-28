@@ -52,6 +52,7 @@ RestApiFramework/
 │       │   │   └── Hooks/                # One hook class per API (<Name>Hooks): setup by tag, cleanup after every scenario;
 │       │   │                             # CommonHooks: once per run, before all scenarios (the orphan sweep)
 │       │   ├── Cleanup/                  # Unit tests of framework code, in the package they test (OrphanSweepTest)
+│       │   ├── Conventions/              # Convention tests: feature files follow the tag and step rules
 │       │   └── Utilities/                # (RetryTest)
 │       └── resources/                    # Non-Java files the tests read, loaded from the classpath
 │           ├── features/                 # One feature file per API (<Name>Api.feature)
@@ -122,7 +123,8 @@ SUCCESS**.
 ## Running Tests
 
 Config and feature files are loaded from the classpath, so tests can be started from any folder. The scenarios call
-the live practice API; the unit tests (`RetryTest`, `OrphanSweepTest`) don't call any API.
+the live practice API; the unit tests (`RetryTest`, `OrphanSweepTest`) and the convention tests
+(`FeatureFileConventionsTest`) don't call any API.
 
 | Goal                  | Command                                                       |
 |-----------------------|---------------------------------------------------------------|
@@ -130,6 +132,7 @@ the live practice API; the unit tests (`RetryTest`, `OrphanSweepTest`) don't cal
 | By tag                | `mvn test -Dcucumber.filter.tags="@AddPlace"`                 |
 | One scenario          | Green arrow next to the scenario in the `.feature` file       |
 | Unit tests            | Green arrow next to `RetryTest` or `OrphanSweepTest`; `mvn test` runs them too |
+| Convention tests      | Green arrow next to `FeatureFileConventionsTest`; `mvn test` runs them too |
 
 Tags: `@PlaceApi`, `@ProductApi` and `@OrderApi` (every scenario of that API), `@AddPlace`, `@DeletePlace`,
 `@CreateProduct`, `@DeleteProduct`, `@CreateOrder`, `@DeleteOrder`, `@Smoke`.
@@ -262,8 +265,30 @@ it never logs the body itself. `assertHttpOk(response)` (200) and
 `assertHttpNotFound(response)` (404) are named shortcuts for it. Steps assert the exact code from the API contract,
 not just "any 2xx".
 
+`Assertions.assertNoViolations(description, violations)` asserts that a check found nothing wrong; on failure it logs
+how many violations there are, one per line, so every problem shows in one run.
+
 Other messages go through `Log.logInformation`, `logWarning` and `logError`. Logs are written to the console and
 to one file per run in `target/logs/test_run_<timestamp>.log`, as configured in `logback-test.xml`.
+
+### Convention tests
+
+`Conventions/FeatureFileConventionsTest` checks every feature file against the team's rules, so a missing tag fails
+the build instead of being caught in review. It parses the files with Cucumber's Gherkin parser
+(`Conventions/FeatureFileReader`), calls no API and runs with `mvn test`.
+
+| Rule                                    | What it checks                                                                 |
+|-----------------------------------------|--------------------------------------------------------------------------------|
+| `everyFeatureHasOwnerFeatureAndApiTags` | exactly one `@owner:<Name>` and `@feature:<Name>`, plus the matching API tag (`@feature:Order` needs `@OrderApi`) |
+| `everyScenarioHasPriorityAndSeverity`   | exactly one priority (`@P0`–`@P4`) and one severity (`@blocker`, `@critical`, `@major`, `@minor`, `@trivial`) |
+| `everyScenarioHasAThenStep`             | at least one `Then` step                                                       |
+| `everyScenarioHasActionAndRunTag`       | exactly one action tag (`@Add`, `@Create` or `@Delete` + feature) and at least one run tag (`@Smoke`) |
+| `everyTagIsAllowedForItsFeature`        | each tag is the feature's API tag, an action on it, a run tag, a priority, a severity, or (on the Feature only) `@owner`/`@feature`; no tags on `Examples:` blocks |
+
+Each rule reports every violation at once, one per line, with the file, line and scenario
+(`Assertions.assertNoViolations`). Tags go on the Feature or the Scenario, never on an `Examples:` block, so every
+"exactly one" count sees them. A file with a `Rule:` block stops the tests with an error instead of being skipped. To add a tag: a new API needs no change; a new kind of scenario adds its verb to
+`ACTION_VERBS`, and a new kind of run adds its tag to `RUN_TAGS` (both in `FeatureFileReader`).
 
 ### Scenario state, hooks and the API layer
 

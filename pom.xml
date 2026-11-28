@@ -92,6 +92,16 @@
             <version>24.1.0</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- ArchUnit core: checks code structure (layers, POJO setters, Then steps); used by the architecture convention
+             tests, which report through Assertions.assertNoViolations -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <version>1.5.1</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

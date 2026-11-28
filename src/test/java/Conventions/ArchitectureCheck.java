@@ -20,10 +20,8 @@ import static Assertion.Assertions.assertNoViolations;
  */
 final class ArchitectureCheck {
 
-	/** The project's own classes (src/main and src/test, no JARs), imported once for all rules. */
-	private static final JavaClasses CLASSES = new ClassFileImporter().withImportOption(
-			                                                                  ImportOption.Predefined.DO_NOT_INCLUDE_JARS)
-	                                                                  .importClasspath();
+	/** The project's own classes (src/main and src/test, without JARs or JDK classes), imported once for all rules. */
+	private static final JavaClasses CLASSES = importProjectClasses();
 
 	/** Name of the class every check must go through, so it is logged as PASS/FAIL. */
 	private static final String ASSERTIONS_CLASS = "Assertion.Assertions";
@@ -60,20 +58,17 @@ final class ArchitectureCheck {
 	}
 
 	/**
-	 * Check whether a method calls Assertions through one of its own class's methods (one level deep).
+	 * Evaluate a rule against the project's classes and report every violation through
+	 * Assertions.assertNoViolations.
 	 *
-	 * @param method the method to inspect
-	 * @return true if a method of its own class that it calls goes to Assertions
+	 * @param description what the rule checks, starting with "Verify"
+	 * @param rule        the ArchUnit rule
 	 */
-	private static boolean callsAssertionsThroughOwnClass(JavaMethod method) {
-		return method.getMethodCallsFromSelf()
-		             .stream()
-		             .filter(call -> call.getTargetOwner()
-		                                 .equals(method.getOwner()))
-		             .map(call -> call.getTarget()
-		                              .resolveMember())
-		             .flatMap(Optional::stream)
-		             .anyMatch(ArchitectureCheck::callsAssertions);
+	static void assertRule(String description, ArchRule rule) {
+		List<String> violations = rule.evaluate(CLASSES)
+		                              .getFailureReport()
+		                              .getDetails();
+		assertNoViolations(description, violations);
 	}
 
 	/**
@@ -91,16 +86,29 @@ final class ArchitectureCheck {
 	}
 
 	/**
-	 * Evaluate a rule against the project's classes and report every violation through
-	 * Assertions.assertNoViolations.
+	 * Check whether a method calls Assertions through one of its own class's methods (one level deep).
 	 *
-	 * @param description what the rule checks, starting with "Verify"
-	 * @param rule        the ArchUnit rule
+	 * @param method the method to inspect
+	 * @return true if a method of its own class that it calls goes to Assertions
 	 */
-	static void assertRule(String description, ArchRule rule) {
-		List<String> violations = rule.evaluate(CLASSES)
-		                              .getFailureReport()
-		                              .getDetails();
-		assertNoViolations(description, violations);
+	private static boolean callsAssertionsThroughOwnClass(JavaMethod method) {
+		return method.getMethodCallsFromSelf()
+		             .stream()
+		             .filter(call -> call.getTargetOwner()
+		                                 .equals(method.getOwner()))
+		             .map(call -> call.getTarget()
+		                              .resolveMember())
+		             .flatMap(Optional::stream)
+		             .anyMatch(ArchitectureCheck::callsAssertions);
+	}
+
+	/**
+	 * Import the project's own classes from the classpath, without JARs or JDK classes.
+	 *
+	 * @return the classes of src/main and src/test
+	 */
+	private static JavaClasses importProjectClasses() {
+		return new ClassFileImporter().withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_ARCHIVES)
+		                              .importClasspath();
 	}
 }
